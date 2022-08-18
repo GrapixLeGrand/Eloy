@@ -1,11 +1,30 @@
 cmake_minimum_required(VERSION 3.0.0)
 project(Eloy VERSION 0.1.0)
 
-include(CTest)
-enable_testing()
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_C_STANDARD 17)
 
-add_library(Eloy Eloy.cpp)
+set(LEVEKGL_BUILD_SAMPLES OFF CACHE BOOL "Do not build LevekGL samples" FORCE)
 
-set(CPACK_PROJECT_NAME ${PROJECT_NAME})
-set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
-include(CPack)
+add_subdirectory(thirdparty)
+link_directories(${Eloy_SOURCE_DIR}/source)
+
+set(ELOY_SOURCES
+    "source/Eloy.cpp"
+    "source/Engine.cpp"
+    "source/Simulation.cpp"
+)
+
+add_library(Eloy SHARED ${ELOY_SOURCES})
+
+set(ELOY_TARGET_INCLUDE_DIRS
+    PUBLIC "source"
+    PUBLIC "thirdparty/LevekGL"   
+)
+
+target_include_directories(Eloy ${ELOY_TARGET_INCLUDE_DIRS})
+
+target_link_libraries(Eloy LevekGL)
+
+add_subdirectory(samples)
+

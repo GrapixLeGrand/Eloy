@@ -1,5 +1,1 @@
-#pragma once
-
-namespace Eloy {
-    
-}
+#include "Engine.hpp"
