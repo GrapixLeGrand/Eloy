@@ -12,7 +12,6 @@ link_directories(${Eloy_SOURCE_DIR}/source)
 set(ELOY_SOURCES
     "source/Eloy.cpp"
     "source/Engine.cpp"
-    "source/Simulation.cpp"
 )
 
 add_library(Eloy SHARED ${ELOY_SOURCES})

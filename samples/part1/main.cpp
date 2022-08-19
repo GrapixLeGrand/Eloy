@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "LevekGL.hpp"
+#include "Eloy.hpp"
 
 int resolutionX = 1280;
 int resolutionY = 720;
@@ -22,6 +23,9 @@ int main(int argc, char** argv) {
 
     Levek::SkyBoxPipelineState skybox;
     Levek::GroundPipelineState ground(modelLoader, 150.0f, false);
+
+    Eloy::EngineParameters parameters;
+    Eloy::Engine particleEngine(parameters);
 
     while (!windowController->exit() && !inputController->isKeyPressed(Levek::LEVEK_KEY_Q)) {
         renderer->clear();

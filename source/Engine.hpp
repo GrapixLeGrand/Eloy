@@ -3,52 +3,65 @@
 #include <vector>
 #include "glm/glm.hpp"
 #include "Kernels.hpp"
+#include "EngineParameters.hpp"
 
 namespace Eloy {
 
 class Engine {
 private:
 
-    int X = 0, Y = 0, Z = 0;
-    float particle_radius = static_cast<float>(0.5);
-    float particle_diameter = static_cast<float>(2 * particle_radius);
-    float kernel_radius = static_cast<float>(3.1f * particle_radius);
-    float kernel_factor = static_cast<float>(0.5);
+    int mX = 0, mY = 0, mZ = 0;
+    float mParticleRadius;
+    float mParticleDiameter;
+    float mKernelRadius;
+    float mkernelFactor;
 
-    CubicKernel cubic;
-    float cubic_kernel_k;
-    float cubic_kernel_l;
+    CubicKernel mCubicKernel;
 
     //rest density of fluid
-    float rest_density = static_cast<float>(24.0);
+    float mRestDensity;
     //mass of each particle
-    float mass = static_cast<float>(5.0);
-    glm::vec3 gravity = glm::vec3(0, -10.0, 0.0);
-    float time_step = static_cast<float>(0.01);
-    float relaxation_epsilon = static_cast<float>(10.0);
+    float mMass;
+    glm::vec3 mGravity;
+    
+    float mRelaxationEpsilon;
+    float mSCorrDeltaQ;
+    float mSCorrK;
+    float mSCorrN;
 
-    float s_corr_dq = 0.5f;
-    float s_corr_k = 1.0;
-    float s_corr_n = 4;
+    float mCXsph;
+    float mEpsilonVorticity;
 
-    float c_xsph = 0.1f;
-    float epsilon_vorticity = 0.1f;
+    float mEpsilonCollision = static_cast<float>(0.01);
 
-    std::vector<glm::vec3> velocities;
-    std::vector<glm::vec3> positions;
-    std::vector<glm::vec3> positions_star;
-    std::vector<std::vector<int>> neighbors;
+    float mTimeStep;
 
-    int gridX, gridY, gridZ; //sizes of the grid
-    float cell_size; //size of side length of a single grid cell
-    int num_grid_cells; //total amount of grid cells
+    std::vector<glm::vec3> mVelocities;
+    std::vector<glm::vec3> mPositions;
+    std::vector<glm::vec3> mPositionsStar;
+    std::vector<std::vector<int>> mNeighbors;
+    std::vector<float> mLambdas;
 
-    int num_particles = 0;
+    std::vector<std::vector<int>> mUniformGrid;
+    int mGridX = 0, mGridY = 0, mGridZ = 0; //sizes of the grid
+    float mCellSize = static_cast<float>(0); //size of side length of a single grid cell
+    int mNumGridCells = 0; //total amount of grid cells
+
+    int mNumParticles = 0;
+
+    //utilitary functions
+    inline float s_coor(float rl);
+    inline float resolve_collision(float value, float min, float max);
+    void findNeighborsUniformGrid();
+    inline void clearNeighbors();
+    inline int get_cell_id(glm::vec3 position);
+    inline bool check_index(int i, int min, int max);
 
 public:
 
-Engine();
+Engine(const EngineParameters& parameters);
 void step(float dt);
+
 
 };
 
