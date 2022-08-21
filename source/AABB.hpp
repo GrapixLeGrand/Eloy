@@ -17,7 +17,7 @@ public:
 
     void clampTo(AABB other) {
         min = glm::clamp(min, other.min, glm::vec3(std::numeric_limits<float>::max()));
-        min = glm::clamp(max, glm::vec3(std::numeric_limits<float>::lowest()), other.max);
+        max = glm::clamp(max, glm::vec3(std::numeric_limits<float>::lowest()), other.max);
     }
 
 };

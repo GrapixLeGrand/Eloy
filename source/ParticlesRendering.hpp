@@ -36,8 +36,8 @@ struct ParticlesPipelineSate {
 	ParticlesPipelineSate(Levek::RenderingEngine* engine, const std::vector<glm::vec3>& positions, const std::vector<glm::vec4>& colors, ErrorCode& code) {
 
 		
-		//particlesPositionsVBO = new Levek::VertexBuffer(positions);
-		//particlesColorsVBO = new Levek::VertexBuffer(colors);
+		particlesPositionsVBO = new Levek::VertexBuffer(positions);
+		particlesColorsVBO = new Levek::VertexBuffer(colors);
         code = ELOY_ERROR_OK;
 
         if (positions.size() != colors.size()) {
@@ -82,6 +82,7 @@ struct ParticlesPipelineSate {
 	 * @param new_size in num of particles (NOT bytes)
 	 */
 	void updatePositions(const std::vector<glm::vec3>& positions) {
+        size = positions.size();
 		particlesPositionsVBO->update(positions);
 	}
 
@@ -92,6 +93,7 @@ struct ParticlesPipelineSate {
 	 * @param new_size in num of particles (NOT bytes)
 	 */
 	void updateColors(const std::vector<glm::vec4>& colors) {
+        size = colors.size();
 		particlesColorsVBO->update(colors);
 	}
 

@@ -74,6 +74,13 @@ void step(float dt);
 const std::vector<glm::vec3>& getPositions() const;
 const std::vector<glm::vec4>& getColors() const;
 
+float getDiameter() {
+    return mParticleDiameter;
+}
+
+//todo
+void getParameters(EngineParameters& outParameters);
+
 
 };
 

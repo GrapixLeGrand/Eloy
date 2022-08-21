@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
             camera.getView(),
             camera.getViewInv(),
             glm::vec3(0, -1, 0),
-            parameters.mParticuleRadius
+            particleEngine.getDiameter()
         );
         particleRendering.draw(renderer);
 
