@@ -25,6 +25,9 @@ int main(int argc, char** argv) {
     Levek::GroundPipelineState ground(modelLoader, 150.0f, false);
 
     Eloy::EngineParameters parameters;
+    Eloy::AABBParticlesData aabb1({5, 5, 5}, {0.2, 0.2, 0.2}, {10, 10, 10});
+    parameters.mParticlesData.push_back(&aabb1);
+
     Eloy::Engine particleEngine(parameters);
 
     while (!windowController->exit() && !inputController->isKeyPressed(Levek::LEVEK_KEY_Q)) {

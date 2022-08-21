@@ -1,6 +1,7 @@
 #include "Eloy.hpp"
 
 #include "glm/gtc/constants.hpp"
+#include "EngineParameters.hpp"
 
 namespace Eloy {    
 
@@ -9,6 +10,8 @@ Engine::Engine(const EngineParameters& parameters) {
     mX = parameters.mX;
     mY = parameters.mY;
     mZ = parameters.mZ;
+
+    mAABB = AABB({0, 0, 0} , {mX, mY, mZ});
 
     mParticleRadius = parameters.mParticuleRadius;
     mParticleDiameter = parameters.mParticuleRadius * static_cast<float>(2);
@@ -30,6 +33,10 @@ Engine::Engine(const EngineParameters& parameters) {
     mEpsilonVorticity = parameters.mEpsilonVorticity;
 
     mTimeStep = parameters.mTimeStep;
+
+    for (const IParticlesData* data : parameters.mParticlesData) {
+        data->addParticlesData(this);
+    }
 }
 
 inline float Engine::s_coor(float rl) {

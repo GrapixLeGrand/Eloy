@@ -3,14 +3,19 @@
 #include <vector>
 #include "glm/glm.hpp"
 #include "Kernels.hpp"
-#include "EngineParameters.hpp"
+#include "AABB.hpp"
+
 
 namespace Eloy {
+
+class EngineParameters;
 
 class Engine {
 private:
 
     int mX = 0, mY = 0, mZ = 0;
+    AABB mAABB;
+
     float mParticleRadius;
     float mParticleDiameter;
     float mKernelRadius;
@@ -58,9 +63,12 @@ private:
     inline bool check_index(int i, int min, int max);
 
 public:
+friend class IParticlesData;
+friend class AABBParticlesData;
 
 Engine(const EngineParameters& parameters);
 void step(float dt);
+
 
 
 };
