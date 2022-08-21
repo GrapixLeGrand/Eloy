@@ -14,7 +14,7 @@ set(ELOY_SOURCES
     "source/Engine.cpp"
 )
 
-add_library(Eloy SHARED ${ELOY_SOURCES})
+add_library(Eloy STATIC ${ELOY_SOURCES})
 
 set(ELOY_TARGET_INCLUDE_DIRS
     PUBLIC "source"
@@ -24,6 +24,8 @@ set(ELOY_TARGET_INCLUDE_DIRS
 target_include_directories(Eloy ${ELOY_TARGET_INCLUDE_DIRS})
 
 target_link_libraries(Eloy LevekGL)
+
+add_compile_definitions(ELOY_SOURCE_DIRECTORY="${Eloy_SOURCE_DIR}/source")
 
 add_subdirectory(samples)
 

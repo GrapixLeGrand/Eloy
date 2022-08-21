@@ -28,9 +28,10 @@ public:
 
 class AABBParticlesData : public IParticlesData, AABB {
 private:
-    glm::vec3 mPosition = {0, 0, 0};
+    //glm::vec3 mPosition = {0, 0, 0};
+    glm::vec4 mColor = {1, 1, 1, 1};
 public:
-    AABBParticlesData(glm::vec3 position, glm::vec3 min, glm::vec3 max): AABB(min, max), mPosition(position) {}
+    AABBParticlesData(glm::vec3 min, glm::vec3 max, glm::vec4 color): AABB(min, max), mColor(color) {}
     virtual ErrorCode addParticlesData(Engine* engine) const {
         ParticlesDataPayload result;
 
@@ -44,11 +45,24 @@ public:
 
         glm::vec3 particles_dims_f = dims / engine->mParticleDiameter;
         glm::ivec3 particles_dim = { static_cast<int>(dims.x) + 1,  static_cast<int>(dims.y) + 1, static_cast<int>(dims.z) + 1 };
+        
+        int numNewParticles = particles_dim.x * particles_dim.y * particles_dim.z;
+        if (numNewParticles <= 0) {
+            return ELOY_ERROR_DOMAIN;
+        }
+
+        int particlePointer = engine->mNumParticles;
+        engine->mNumParticles += numNewParticles;
+        engine->resize(engine->mNumParticles);
 
         for (int y = 0; y < particles_dim.y; y++) {
             for (int z = 0; z < particles_dim.z; z++) {
                 for (int x = 0; x < particles_dim.x; x++) {
-                    
+                    glm::vec3 newRelPosition = glm::vec3(x, y, z) / engine->mParticleDiameter;
+                    glm::vec3 newBasePosition = adjustedAABB.min;
+                    engine->mPositions[particlePointer] = newBasePosition + newRelPosition;
+                    engine->mColors[particlePointer] = mColor;
+                    particlePointer++;
                 }
             }
         }

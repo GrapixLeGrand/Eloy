@@ -6,6 +6,7 @@ enum ErrorCode {
     ELOY_ERROR_OK,
     ELOY_ERROR_OUT_OF_DOMAIN,
     ELOY_ERROR_DOMAIN,
+    ELOY_ERROR_BAD_SIZE,
 };
 
 }

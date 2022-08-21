@@ -1,5 +1,7 @@
 #include "Eloy.hpp"
 
+#include <algorithm>
+
 #include "glm/gtc/constants.hpp"
 #include "EngineParameters.hpp"
 
@@ -37,6 +39,21 @@ Engine::Engine(const EngineParameters& parameters) {
     for (const IParticlesData* data : parameters.mParticlesData) {
         data->addParticlesData(this);
     }
+
+    std::fill(mVelocities.begin(), mVelocities.end(), glm::vec3(0));
+    std::fill(mPositionsStar.begin(), mPositionsStar.end(), glm::vec3(0));
+    std::fill(mLambdas.begin(), mLambdas.end(), static_cast<float>(0));
+    mNeighbors = std::vector<std::vector<int>>(mNumParticles, std::vector<int>{});
+    mCellSize = mKernelRadius;
+
+    mGridX = static_cast<float>(mX / mCellSize) + 1;
+    mGridY = static_cast<float>(mY / mCellSize) + 1;
+    mGridZ = static_cast<float>(mZ / mCellSize) + 1;
+
+    mNumGridCells = mGridX * mGridY * mGridZ;
+    mUniformGrid = std::vector<std::vector<int>>(mNumGridCells, std::vector<int>{});
+
+
 }
 
 inline float Engine::s_coor(float rl) {
@@ -124,6 +141,13 @@ void Engine::step(float dt) {
     }
 }
 
+void Engine::resize(size_t newSize) {
+    mPositionsStar.resize(newSize);
+    mPositions.resize(newSize);
+    mVelocities.resize(newSize);
+    mLambdas.resize(newSize);
+    mColors.resize(newSize);
+}
 
 inline int Engine::get_cell_id(glm::vec3 position) {
     //position = glm::clamp(position, glm::vec3(simulation->mCellSize * 0.5f), glm::vec3(simulation->domainX - simulation->mCellSize * 0.5f, simulation->domainY - simulation->mCellSize * 0.5f, simulation->domainZ - simulation->mCellSize * 0.5f));
@@ -227,5 +251,15 @@ void Engine::findNeighborsUniformGrid() {
     } //end grid checking
 
 }
+
+
+const std::vector<glm::vec3>& Engine::getPositions() const {
+    return mPositions;
+}
+
+const std::vector<glm::vec4>& Engine::getColors() const {
+    return mColors;
+}
+
 
 }

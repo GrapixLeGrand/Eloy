@@ -25,10 +25,13 @@ int main(int argc, char** argv) {
     Levek::GroundPipelineState ground(modelLoader, 150.0f, false);
 
     Eloy::EngineParameters parameters;
-    Eloy::AABBParticlesData aabb1({5, 5, 5}, {0.2, 0.2, 0.2}, {10, 10, 10});
+    Eloy::AABBParticlesData aabb1({0.2, 0.2, 0.2}, {10, 10, 10}, {1, 0, 0, 1});
     parameters.mParticlesData.push_back(&aabb1);
 
     Eloy::Engine particleEngine(parameters);
+    
+    Eloy::ErrorCode err = Eloy::ELOY_ERROR_OK;
+    Eloy::ParticlesPipelineSate particleRendering(engine, particleEngine.getPositions(), particleEngine.getColors(), err);
 
     while (!windowController->exit() && !inputController->isKeyPressed(Levek::LEVEK_KEY_Q)) {
         renderer->clear();
@@ -37,8 +40,22 @@ int main(int argc, char** argv) {
             
         skybox.draw(renderer, camera.getView(), camera.getProjection());
         ground.draw(renderer, camera.getViewProjection());
+        
+        particleEngine.step(0.01f);
+        particleRendering.updatePositions(particleEngine.getPositions());
+        particleRendering.updateColors(particleEngine.getColors());
 
-        inputController->poll();    
+        particleRendering.setUniforms(
+            camera.getViewProjection(),
+            camera.getProjection(),
+            camera.getView(),
+            camera.getViewInv(),
+            glm::vec3(0, -1, 0),
+            parameters.mParticuleRadius
+        );
+        particleRendering.draw(renderer);
+
+        inputController->poll();
         windowController->swapBuffers();
     }
 

@@ -7,7 +7,7 @@
 namespace Eloy {
 class EngineParameters {
 public:
-    int mX = 0, mY = 0, mZ = 0;
+    int mX = 30, mY = 30, mZ = 30;
     float mParticuleRadius          = static_cast<float>(0.5);
     float mKernelFactor             = static_cast<float>(0.5);
     float mRestDensity              = static_cast<float>(24.0);
