@@ -81,9 +81,10 @@ void Engine::step(float dt) {
     for (int i = 0; i < mNumParticles; i++) {
         mVelocities[i] += mGravity * mMass * dt;
         mPositionsStar[i] = mPositions[i] + mVelocities[i] * dt; //prediction
+        mPositionsStar[i] = glm::clamp(mPositionsStar[i], mAABB.min, mAABB.max);
     }
 
-    //find_mNeighbors_uniform_grid(simulation);
+    findNeighborsUniformGrid();
 
     //solve pressure
     for (int i = 0; i < mNumParticles; i++) {
@@ -155,7 +156,7 @@ inline int Engine::get_cell_id(glm::vec3 position) {
     int cell_id =
             ((int) position.y) * mGridX * mGridZ +
             ((int) position.x) * mGridZ +
-            ((int) position.z); 
+            ((int) position.z);
     //cell_id = glm::clamp(cell_id, 0, simulation->mNumGridCells - 1);
     return cell_id;
 }
@@ -176,14 +177,9 @@ void Engine::findNeighborsUniformGrid() {
 
     for (int i = 0; i < mNumParticles; i++) {
         int cell_id = get_cell_id(mPositionsStar[i]);
-        glm::vec3& position = mPositionsStar[i];
-        mUniformGrid[cell_id].push_back(i);
-    }
-
-    for (int i = 0; i < mNumParticles; i++) {
-        int cell_id = get_cell_id(mPositionsStar[i]);
-        glm::vec3& position = mPositionsStar[i];
-        mUniformGrid[cell_id].push_back(i);
+        //glm::vec3& position = mPositionsStar[i];
+        if (cell_id >= 0 && cell_id < mNumGridCells)
+            mUniformGrid[cell_id].push_back(i);
     }
 
     for (int yy = 0; yy < mGridY; yy++) {
@@ -195,9 +191,7 @@ void Engine::findNeighborsUniformGrid() {
                     xx * mGridZ + 
                     zz;
 
-                std::vector<int>& current_cell_indices = mUniformGrid[cell_id];
-
-                if (current_cell_indices.empty() == true) {
+                if (mUniformGrid[cell_id].empty() == true) {
                     continue;
                 }
 
@@ -219,20 +213,18 @@ void Engine::findNeighborsUniformGrid() {
                                 (xx + x) * mGridZ + 
                                 (zz + z);
 
-                            std::vector<int>& neighbor_cell_indices = mUniformGrid[neighbor_cell_id];
-
-                            if (neighbor_cell_indices.empty() == true) {
+                            if (mUniformGrid[neighbor_cell_id].empty() == true) {
                                 continue;
                             }
 
-                            for (int i = 0; i < current_cell_indices.size(); i++) {
-                                const int current_index = current_cell_indices[i];
+                            for (int i = 0; i < mUniformGrid[cell_id].size(); i++) {
+                                const int current_index = mUniformGrid[cell_id][i];
                                 /*if (current_index >= ptr_solid_start) {
                                     continue;
                                 }*/
                                 const glm::vec3& self = mPositionsStar[current_index];
-                                for (int j = 0; j < neighbor_cell_indices.size(); j++) {
-                                    const int neighbor_index = neighbor_cell_indices[j];
+                                for (int j = 0; j < mUniformGrid[neighbor_cell_id].size(); j++) {
+                                    const int neighbor_index = mUniformGrid[neighbor_cell_id][j];
                                     const glm::vec3& other = mPositionsStar[neighbor_index];
                                     const glm::vec3 tmp = self - other;
                                     if (glm::dot(tmp, tmp) <= mKernelRadius * mKernelRadius) {
@@ -253,6 +245,26 @@ void Engine::findNeighborsUniformGrid() {
 }
 
 
+void Engine::getParameters(EngineParameters& out) const {
+
+    out.mParticuleRadius = mParticleRadius;
+    out.mCXsph = mCXsph;
+    out.mEpsilonVorticity = mEpsilonVorticity;
+    out.mGravity = mGravity;
+    out.mKernelFactor = mkernelFactor;
+    out.mMass = mMass;
+    out.mRelaxationEpsilon = mRelaxationEpsilon;
+    out.mRestDensity = mRestDensity;
+    out.mSCorrDeltaQ = mSCorrDeltaQ;
+    out.mSCorrK = mSCorrK;
+    out.mSCorrN = mSCorrN;
+    out.mTimeStep = mTimeStep;
+    out.mX = mX;
+    out.mY = mY;
+    out.mZ = mZ;
+
+}
+
 const std::vector<glm::vec3>& Engine::getPositions() const {
     return mPositions;
 }
@@ -260,6 +272,7 @@ const std::vector<glm::vec3>& Engine::getPositions() const {
 const std::vector<glm::vec4>& Engine::getColors() const {
     return mColors;
 }
+
 
 
 }

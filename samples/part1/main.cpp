@@ -1,5 +1,6 @@
 #include <iostream>
 
+#define LEVEK_INCLUDE_IMGUI
 #include "LevekGL.hpp"
 #include "Eloy.hpp"
 
@@ -13,6 +14,7 @@ int main(int argc, char** argv) {
     Levek::InputController* inputController = engine->getInputController();
     Levek::Renderer* renderer = engine->getRenderer();
     Levek::ModelLoader* modelLoader = engine->getModelLoader();
+    windowController->initImGui();
 
     Levek::ArcballCamera camera;
     camera.setProjection(glm::perspective(glm::radians(45.0f), (resolutionX * 1.0f) / (1.0f * resolutionY), 0.01f, 1000.0f));
@@ -25,13 +27,15 @@ int main(int argc, char** argv) {
     Levek::GroundPipelineState ground(modelLoader, 150.0f, false);
 
     Eloy::EngineParameters parameters;
-    Eloy::AABBParticlesData aabb1({0.2, 0.2, 0.2}, {10, 10, 10}, {1, 0, 0, 1});
+    parameters.mParticuleRadius = 0.25f;
+    Eloy::AABBParticlesData aabb1({0.5, 0.5, 0.5}, {7, 7, 7}, {1, 0, 0, 1});
     parameters.mParticlesData.push_back(&aabb1);
 
     Eloy::Engine particleEngine(parameters);
     
     Eloy::ErrorCode err = Eloy::ELOY_ERROR_OK;
     Eloy::ParticlesPipelineSate particleRendering(engine, particleEngine.getPositions(), particleEngine.getColors(), err);
+    Eloy::EngineImGui engineImGui(particleEngine);
 
     while (!windowController->exit() && !inputController->isKeyPressed(Levek::LEVEK_KEY_Q)) {
         renderer->clear();
@@ -54,6 +58,26 @@ int main(int argc, char** argv) {
             particleEngine.getDiameter()
         );
         particleRendering.draw(renderer);
+
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        ImGui::Begin("Main");
+
+        std::string fps = std::to_string((int)(1.0f / windowController->getDeltaTime()));
+        fps += " fps";
+        ImGui::Text(fps.c_str());
+
+        if (engineImGui.imgui()) {
+            particleEngine.getParameters(parameters);
+            particleEngine = Eloy::Engine(parameters);
+            //engineImGui = Eloy::EngineImGui(particleEngine);
+        }
+
+        ImGui::End();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         inputController->poll();
         windowController->swapBuffers();

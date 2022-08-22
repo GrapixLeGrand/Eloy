@@ -44,7 +44,7 @@ public:
         }
 
         glm::vec3 particles_dims_f = dims / engine->mParticleDiameter;
-        glm::ivec3 particles_dim = { static_cast<int>(dims.x) + 1,  static_cast<int>(dims.y) + 1, static_cast<int>(dims.z) + 1 };
+        glm::ivec3 particles_dim = { static_cast<int>(particles_dims_f.x) + 1,  static_cast<int>(particles_dims_f.y) + 1, static_cast<int>(particles_dims_f.z) + 1 };
         
         int numNewParticles = particles_dim.x * particles_dim.y * particles_dim.z;
         if (numNewParticles <= 0) {
@@ -55,10 +55,12 @@ public:
         engine->mNumParticles += numNewParticles;
         engine->resize(engine->mNumParticles);
 
+        float invDiameter = 1.0f / engine->mParticleDiameter;
         for (int y = 0; y < particles_dim.y; y++) {
             for (int z = 0; z < particles_dim.z; z++) {
                 for (int x = 0; x < particles_dim.x; x++) {
-                    glm::vec3 newRelPosition = glm::vec3(x, y, z) / engine->mParticleDiameter;
+                    glm::vec3 newRelPosition = glm::vec3(x, y, z);
+                    newRelPosition *= engine->mParticleDiameter;
                     glm::vec3 newBasePosition = adjustedAABB.min;
                     engine->mPositions[particlePointer] = newBasePosition + newRelPosition;
                     engine->mColors[particlePointer] = mColor;

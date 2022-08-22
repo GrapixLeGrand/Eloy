@@ -62,14 +62,15 @@ private:
     inline int get_cell_id(glm::vec3 position);
     inline bool check_index(int i, int min, int max);
     void resize(size_t newSize);
-
     std::vector<glm::vec4> mColors;
 public:
 friend class IParticlesData;
 friend class AABBParticlesData;
+friend class EngineImGui;
 
 Engine(const EngineParameters& parameters);
 void step(float dt);
+
 
 const std::vector<glm::vec3>& getPositions() const;
 const std::vector<glm::vec4>& getColors() const;
@@ -79,7 +80,7 @@ float getDiameter() {
 }
 
 //todo
-void getParameters(EngineParameters& outParameters);
+void getParameters(EngineParameters& out) const;
 
 
 };
