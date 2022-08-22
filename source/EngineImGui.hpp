@@ -26,11 +26,11 @@ public:
             ImGui::InputFloat("kernel radius", &engine.mKernelRadius, 0.01f, 5.0f, "%.3f");
             ImGui::SliderFloat("kernel factor", &engine.mkernelFactor, 0.0001f, 5.0f, "%.3f");
             engine.mCubicKernel.mFactor = engine.mkernelFactor;
-            ImGui::InputFloat("rest density", &engine.mRestDensity, 0.01f, 200.0f, "%.3f");
-            ImGui::InputFloat("mass", &engine.mMass, 0.01f, 100.0f, "%.3f");
+            ImGui::SliderFloat("rest density", &engine.mRestDensity, 0.01f, 200.0f, "%.3f");
+            ImGui::SliderFloat("mass", &engine.mMass, 0.01f, 100.0f, "%.3f");
             ImGui::InputFloat("gravity (-y)", &engine.mGravity.y, -50.01f, -0.1f, "%.3f");
 
-            ImGui::InputFloat("relaxation", &engine.mRelaxationEpsilon, 0.01f, 1000.0f, "%.3f");
+            ImGui::SliderFloat("relaxation", &engine.mRelaxationEpsilon, 0.01f, 1000.0f, "%.3f");
             
             ImGui::InputFloat("SCoorDeltaQ", &engine.mSCorrDeltaQ, 0.01f, 5.0f, "%.3f");
             ImGui::InputFloat("SCoorK", &engine.mSCorrK, 0.01f, 5.0f, "%.3f");

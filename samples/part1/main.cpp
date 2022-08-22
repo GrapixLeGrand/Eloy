@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
     Levek::GroundPipelineState ground(modelLoader, 150.0f, false);
 
     Eloy::EngineParameters parameters;
-    parameters.mParticuleRadius = 0.25f;
+    //parameters.mParticuleRadius = 0.25f;
     Eloy::AABBParticlesData aabb1({0.5, 0.5, 0.5}, {7, 7, 7}, {1, 0, 0, 1});
     parameters.mParticlesData.push_back(&aabb1);
 

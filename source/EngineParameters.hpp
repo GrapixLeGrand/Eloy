@@ -7,11 +7,11 @@
 namespace Eloy {
 class EngineParameters {
 public:
-    int mX = 30, mY = 30, mZ = 30;
-    float mParticuleRadius          = static_cast<float>(0.5);
-    float mKernelFactor             = static_cast<float>(0.5);
+    int mX = 20, mY = 20, mZ = 20;
+    float mParticuleRadius          = static_cast<float>(0.25);
+    float mKernelFactor             = static_cast<float>(1.5);
     float mRestDensity              = static_cast<float>(24.0);
-    float mMass                     = static_cast<float>(5);
+    float mMass                     = static_cast<float>(2.5);
     float mTimeStep                 = static_cast<float>(0.01);
     glm::vec3 mGravity              = glm::vec3(0, -10.0, 0.0);
     float mRelaxationEpsilon        = static_cast<float>(10.0);

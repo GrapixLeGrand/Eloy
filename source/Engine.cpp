@@ -56,8 +56,24 @@ Engine::Engine(const EngineParameters& parameters) {
 
 }
 
+#define CHECK_NAN_VEC(V) \
+    assert(!glm::isnan(V.x) || !glm::isnan(V.y) || !glm::isnan(V.z) && "the vector has nan comp"); \
+    assert(!glm::isinf(V.x) || !glm::isinf(V.y) || !glm::isinf(V.z) && "the vector has inf comp");
+    
+
+#define CHECK_NAN_VAL(V) \
+    assert(!glm::isnan(V) && "the value is nan"); \
+    assert(!glm::isinf(V) && "the value is inf");
+
+
 inline float Engine::s_coor(float rl) {
-    return -mSCorrK * std::pow(mCubicKernel.W(rl) / mCubicKernel.W(mSCorrDeltaQ), mSCorrN);
+    float result = static_cast<float>(0);
+    float W = mCubicKernel.W(mSCorrDeltaQ);
+    if (W > 0.001f) { //glm::epsilon<float>()
+        result = -mSCorrK * std::pow(mCubicKernel.W(rl) / W, mSCorrN);
+    }
+    CHECK_NAN_VAL(result);
+    return result;
 }
 
 inline float Engine::resolve_collision(float value, float min, float max) {
@@ -73,6 +89,9 @@ inline float Engine::resolve_collision(float value, float min, float max) {
     return value;
 }
 
+
+
+
 void Engine::step(float dt) {
 
     dt = glm::clamp(dt, 0.001f, 0.01f);
@@ -80,8 +99,10 @@ void Engine::step(float dt) {
     //integration
     for (int i = 0; i < mNumParticles; i++) {
         mVelocities[i] += mGravity * mMass * dt;
+        CHECK_NAN_VEC(mVelocities[i]);
         mPositionsStar[i] = mPositions[i] + mVelocities[i] * dt; //prediction
-        mPositionsStar[i] = glm::clamp(mPositionsStar[i], mAABB.min, mAABB.max);
+        //mPositionsStar[i] = glm::clamp(mPositionsStar[i], mAABB.min + glm::vec3(mParticleRadius), mAABB.max - glm::vec3(mParticleRadius));
+        CHECK_NAN_VEC(mPositionsStar[i]);
     }
 
     findNeighborsUniformGrid();
@@ -94,6 +115,7 @@ void Engine::step(float dt) {
             glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
             float len = glm::length(ij);
             densitiy += mMass * mCubicKernel.W(len);
+            CHECK_NAN_VEC(ij);
         }
         densitiy += mMass * mCubicKernel.W(0.0f);
 
@@ -102,19 +124,24 @@ void Engine::step(float dt) {
         float constraint_gradient_sum = static_cast<float>(0);
         glm::vec3 grad_current_p = glm::vec3(0.0);
 
+        CHECK_NAN_VAL(constraint_i);
+        
         //equation 8
         for (int j = 0; j < mNeighbors[i].size(); j++) {
             glm::vec3 temp = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
             glm::vec3 neighbor_grad = -(mMass / mRestDensity) * mCubicKernel.WGrad(temp);
+            CHECK_NAN_VEC(neighbor_grad);
             constraint_gradient_sum += glm::dot(neighbor_grad, neighbor_grad);
             grad_current_p -= neighbor_grad;
         }
 
+        CHECK_NAN_VEC(grad_current_p);
         constraint_gradient_sum += glm::dot(grad_current_p, grad_current_p);
 
         mLambdas[i] = static_cast<float>(0);
         if (constraint_gradient_sum > 0.0f) {
             mLambdas[i] = -constraint_i / (constraint_gradient_sum + mRelaxationEpsilon);
+            CHECK_NAN_VAL(mLambdas[i]);
         }
 
     }
@@ -125,19 +152,28 @@ void Engine::step(float dt) {
         glm::vec3 pressure_force = glm::vec3(0.0);
         for (int j = 0; j < mNeighbors[i].size(); j++) {
             glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
-            pressure_force += (mLambdas[i] + mLambdas[j] + s_coor(glm::length(ij))) * mCubicKernel.WGrad(ij);
+            CHECK_NAN_VEC(ij);
+            pressure_force += (mLambdas[i] + mLambdas[j]) * mCubicKernel.WGrad(ij); //+ s_coor(glm::length(ij))
+            CHECK_NAN_VEC(pressure_force);
         }
 
         pressure_force /= mRestDensity;
+        CHECK_NAN_VEC(pressure_force);
 
         //update prediction
         mPositionsStar[i] += pressure_force;
+        CHECK_NAN_VEC(mPositionsStar[i]);
 
         //update velocity
-        mPositionsStar[i] = glm::clamp(mPositionsStar[i], glm::vec3(mParticleRadius), glm::vec3(mX - mParticleRadius, mY - mParticleRadius, mZ - mParticleRadius));
+        mPositionsStar[i] = glm::clamp(mPositionsStar[i], mAABB.min + mParticleRadius, mAABB.max - mParticleRadius);
+        CHECK_NAN_VEC(mPositionsStar[i]);
 
         mVelocities[i] = (mPositionsStar[i] - mPositions[i]) / mTimeStep;
+        
+        CHECK_NAN_VEC(mVelocities[i]);
+
         mPositions[i] = mPositionsStar[i];
+        //mPositions[i] = glm::clamp(mPositions[i], mAABB.min + mParticleRadius, mAABB.max - mParticleRadius);
 
     }
 }
@@ -152,6 +188,7 @@ void Engine::resize(size_t newSize) {
 
 inline int Engine::get_cell_id(glm::vec3 position) {
     //position = glm::clamp(position, glm::vec3(simulation->mCellSize * 0.5f), glm::vec3(simulation->domainX - simulation->mCellSize * 0.5f, simulation->domainY - simulation->mCellSize * 0.5f, simulation->domainZ - simulation->mCellSize * 0.5f));
+    CHECK_NAN_VEC(position);
     position /= mCellSize;
     int cell_id =
             ((int) position.y) * mGridX * mGridZ +
@@ -178,6 +215,7 @@ void Engine::findNeighborsUniformGrid() {
     for (int i = 0; i < mNumParticles; i++) {
         int cell_id = get_cell_id(mPositionsStar[i]);
         //glm::vec3& position = mPositionsStar[i];
+        assert(cell_id >= 0 && cell_id < mNumGridCells && "index must be in range");
         if (cell_id >= 0 && cell_id < mNumGridCells)
             mUniformGrid[cell_id].push_back(i);
     }
