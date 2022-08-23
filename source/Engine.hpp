@@ -66,6 +66,12 @@ private:
     inline bool check_index(int i, int min, int max);
     void resize(size_t newSize);
     std::vector<glm::vec4> mColors;
+
+    //for profiling
+    unsigned long long mSolverCycles = 0;
+    unsigned long long mNeighborCycles = 0;
+    
+
 public:
 friend class IParticlesData;
 friend class AABBParticlesData;

@@ -4,6 +4,7 @@
 
 #include "glm/gtc/constants.hpp"
 #include "EngineParameters.hpp"
+#include "profiling/tsc_x86.hpp"
 
 namespace Eloy {    
 
@@ -17,7 +18,7 @@ Engine::Engine(const EngineParameters& parameters) {
 
     mParticleRadius = parameters.mParticuleRadius;
     mParticleDiameter = parameters.mParticuleRadius * static_cast<float>(2);
-    mKernelRadius = static_cast<float>(3.1) * mParticleRadius;
+    mKernelRadius = parameters.mKernelRadius;//static_cast<float>(3.1) * mParticleRadius;
     mkernelFactor = parameters.mKernelFactor;
     mBoundaryCollisionCoeff = parameters.mBoundaryCollisionCoeff;
 
@@ -120,7 +121,11 @@ void Engine::step() {
         CHECK_NAN_VEC(mPositionsStar[i]);
     }
 
+    mNeighborCycles = start_tsc();
     findNeighborsUniformGrid();
+    mNeighborCycles = stop_tsc(mNeighborCycles);
+
+    mSolverCycles = start_tsc();
 
     for (int s = 0; s < mSubsteps; s++) {
 
@@ -202,6 +207,7 @@ void Engine::step() {
         mPositions[i] = mPositionsStar[i];
     }
 
+    mSolverCycles = stop_tsc(mSolverCycles);
         /*
         //update prediction
         //mPositionsStar[i] += pressure_force;
@@ -347,7 +353,7 @@ void Engine::getParameters(EngineParameters& out) const {
     out.mBoundaryCollisionCoeff = mBoundaryCollisionCoeff;
     out.mSubsteps = mSubsteps;
     out.mTimeStep = mTimeStep;
-
+    out.mKernelRadius = mKernelRadius;
 }
 
 const std::vector<glm::vec3>& Engine::getPositions() const {

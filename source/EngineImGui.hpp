@@ -17,9 +17,13 @@ public:
         bool quit = false;
         ImGui::BeginTabBar("Engine");
         if (ImGui::BeginTabItem("Parameters")) {
+            
+            double solverCycles = static_cast<double>(engine.mSolverCycles) / static_cast<double>(1.0e6);
+            double neighborsCycles = static_cast<double>(engine.mNeighborCycles) / static_cast<double>(1.0e6);
 
-            ImGui::Text("%d particles", engine.mNumParticles);
-            ImGui::Text("%d cells", engine.mNumGridCells);
+            ImGui::Text("%d particles %lf MCycles", engine.mNumParticles, solverCycles);
+            ImGui::Text("%d cells %lf MCycles", engine.mNumGridCells, neighborsCycles);
+            
             ImGui::Text("particle radius %.3f", engine.mParticleRadius);
             ImGui::Text("particle diameter %.3f", engine.mParticleDiameter);
 
@@ -36,11 +40,11 @@ public:
 
             ImGui::SliderInt("subsetps", &engine.mSubsteps, 1, 10, "%d");
             
-            ImGui::SliderFloat("SCoorDeltaQ", &engine.mSCorrDeltaQ, 0.01f, 5.0f, "%.3f");
+            ImGui::SliderFloat("SCoorDeltaQ", &engine.mSCorrDeltaQ, 0.001f, 0.5f, "%.3f");
             ImGui::SliderFloat("SCoorK", &engine.mSCorrK, 0.00000001f, 0.1f, "%.3f");
             ImGui::SliderFloat("SCoorN", &engine.mSCorrN, 0.01f, 5.0f, "%.3f");
 
-            ImGui::SliderFloat("Xsph", &engine.mCXsph, 0.01f, 5.0f, "%.3f");
+            ImGui::SliderFloat("Xsph", &engine.mCXsph, 0.01f, 1.0f, "%.3f");
             ImGui::SliderFloat("epsilon vorticity", &engine.mEpsilonVorticity, 0.01f, 5.0f, "%.3f");
             ImGui::SliderFloat("time step", &engine.mTimeStep, 0.001f, 0.08f, "%.3f");
             quit = ImGui::Button("reset");

@@ -22,6 +22,7 @@ link_directories(${Eloy_SOURCE_DIR}/source)
 set(ELOY_SOURCES
     "source/Eloy.cpp"
     "source/Engine.cpp"
+    "source/profiling/tsc_x86.cpp"
 )
 
 add_library(Eloy STATIC ${ELOY_SOURCES})
