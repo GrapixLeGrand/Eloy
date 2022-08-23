@@ -56,13 +56,13 @@ public:
 
     virtual inline glm::vec3 WGrad(glm::vec3& r) {
         glm::vec3 result = glm::vec3(0.0);
-        glm::vec3 rr = r;
-        r *= mFactor;
-        float rl = glm::length(rr); // * mFactor;
+        //glm::vec3 rr = r;
+        //r *= mFactor;
+        float rl = glm::length(r) * mFactor;
         float q = rl / mRadius;
 
         if (rl > 1.0e-5f && q <= 1.0f) {
-            const glm::vec3 grad_q = (1.0f / (rl * mRadius)) * rr;
+            const glm::vec3 grad_q = (1.0f / (rl * mRadius)) * r;
             if (q <= 0.5f) {
                 result = mL * q * (3.0f * q - 2.0f) * grad_q;
             } else {

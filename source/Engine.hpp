@@ -20,6 +20,7 @@ private:
     float mParticleDiameter;
     float mKernelRadius;
     float mkernelFactor;
+    float mBoundaryCollisionCoeff;
 
     CubicKernel mCubicKernel;
 
@@ -40,12 +41,14 @@ private:
     float mEpsilonCollision = static_cast<float>(0.01);
 
     float mTimeStep;
+    int mSubsteps = 1;
 
     std::vector<glm::vec3> mVelocities;
     std::vector<glm::vec3> mPositions;
     std::vector<glm::vec3> mPositionsStar;
     std::vector<std::vector<int>> mNeighbors;
     std::vector<float> mLambdas;
+    std::vector<glm::vec3> mPressures;
 
     std::vector<std::vector<int>> mUniformGrid;
     int mGridX = 0, mGridY = 0, mGridZ = 0; //sizes of the grid
@@ -69,7 +72,7 @@ friend class AABBParticlesData;
 friend class EngineImGui;
 
 Engine(const EngineParameters& parameters);
-void step(float dt);
+void step();
 
 
 const std::vector<glm::vec3>& getPositions() const;

@@ -23,21 +23,26 @@ public:
             ImGui::Text("particle radius %.3f", engine.mParticleRadius);
             ImGui::Text("particle diameter %.3f", engine.mParticleDiameter);
 
+            ImGui::SliderFloat("boundary coeff", &engine.mBoundaryCollisionCoeff, 0.01f, 5.0f, "%.3f");
+
             ImGui::InputFloat("kernel radius", &engine.mKernelRadius, 0.01f, 5.0f, "%.3f");
             ImGui::SliderFloat("kernel factor", &engine.mkernelFactor, 0.0001f, 5.0f, "%.3f");
             engine.mCubicKernel.mFactor = engine.mkernelFactor;
-            ImGui::SliderFloat("rest density", &engine.mRestDensity, 0.01f, 200.0f, "%.3f");
-            ImGui::SliderFloat("mass", &engine.mMass, 0.01f, 100.0f, "%.3f");
-            ImGui::InputFloat("gravity (-y)", &engine.mGravity.y, -50.01f, -0.1f, "%.3f");
+            ImGui::SliderFloat("rest density", &engine.mRestDensity, 0.01f, 1500.0f, "%.3f");
+            ImGui::SliderFloat("mass", &engine.mMass, 0.001f, 5.0f, "%.3f");
+            ImGui::SliderFloat("gravity (-y)", &engine.mGravity.y, -50.01f, -0.1f, "%.3f");
 
-            ImGui::SliderFloat("relaxation", &engine.mRelaxationEpsilon, 0.01f, 1000.0f, "%.3f");
+            ImGui::SliderFloat("relaxation", &engine.mRelaxationEpsilon, 0.01f, 100.0f, "%.3f");
+
+            ImGui::SliderInt("subsetps", &engine.mSubsteps, 1, 10, "%d");
             
-            ImGui::InputFloat("SCoorDeltaQ", &engine.mSCorrDeltaQ, 0.01f, 5.0f, "%.3f");
-            ImGui::InputFloat("SCoorK", &engine.mSCorrK, 0.01f, 5.0f, "%.3f");
-            ImGui::InputFloat("SCoorN", &engine.mSCorrN, 0.01f, 5.0f, "%.3f");
+            ImGui::SliderFloat("SCoorDeltaQ", &engine.mSCorrDeltaQ, 0.01f, 5.0f, "%.3f");
+            ImGui::SliderFloat("SCoorK", &engine.mSCorrK, 0.00000001f, 0.1f, "%.3f");
+            ImGui::SliderFloat("SCoorN", &engine.mSCorrN, 0.01f, 5.0f, "%.3f");
 
-            ImGui::InputFloat("Xsph", &engine.mCXsph, 0.01f, 5.0f, "%.3f");
-            ImGui::InputFloat("epsilon vorticity", &engine.mEpsilonVorticity, 0.01f, 5.0f, "%.3f");
+            ImGui::SliderFloat("Xsph", &engine.mCXsph, 0.01f, 5.0f, "%.3f");
+            ImGui::SliderFloat("epsilon vorticity", &engine.mEpsilonVorticity, 0.01f, 5.0f, "%.3f");
+            ImGui::SliderFloat("time step", &engine.mTimeStep, 0.001f, 0.08f, "%.3f");
             quit = ImGui::Button("reset");
 
             ImGui::EndTabItem();

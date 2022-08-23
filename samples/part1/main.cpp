@@ -28,7 +28,11 @@ int main(int argc, char** argv) {
 
     Eloy::EngineParameters parameters;
     //parameters.mParticuleRadius = 0.25f;
-    Eloy::AABBParticlesData aabb1({0.5, 0.5, 0.5}, {7, 7, 7}, {1, 0, 0, 1});
+    glm::vec3 min_pos = {0.5, 0.5, 0.5};
+    glm::vec3 max_pos = {5, 10, 5};
+    glm::vec3 offset = {3, 3, 3};
+    Eloy::AABBParticlesData aabb1(min_pos + offset, max_pos + offset, {1, 0, 0, 1});
+
     parameters.mParticlesData.push_back(&aabb1);
 
     Eloy::Engine particleEngine(parameters);
@@ -45,7 +49,7 @@ int main(int argc, char** argv) {
         skybox.draw(renderer, camera.getView(), camera.getProjection());
         ground.draw(renderer, camera.getViewProjection());
         
-        particleEngine.step(0.01f);
+        particleEngine.step();
         particleRendering.updatePositions(particleEngine.getPositions());
         particleRendering.updateColors(particleEngine.getColors());
 
