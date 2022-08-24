@@ -41,10 +41,10 @@ public:
     float mRelaxationEpsilon        = static_cast<float>(1e+05);
     float mSCorrDeltaQ              = static_cast<float>(0.022); //was 0.3 * 0.1
     float mSCorrK                   = static_cast<float>(0.029);
-    float mSCorrN                   = static_cast<float>(1.57);
+    float mSCorrN                   = static_cast<float>(5);//1.57
     float mCXsph                    = static_cast<float>(0.1);
     float mEpsilonVorticity         = static_cast<float>(0.05);
-    int mSubsteps                   = 1;
+    int mSubsteps                   = 2;
 
     std::vector<IParticlesData*> mParticlesData;
 };

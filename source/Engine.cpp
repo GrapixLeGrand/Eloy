@@ -197,33 +197,54 @@ void Engine::step() {
             dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, 0, 1), glm::vec3(0, 0, 0), mPositionsStar[i], mParticleRadius);
             dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, 0, -1), glm::vec3(0, 0, mZ), mPositionsStar[i], mParticleRadius);
             mPositionsStar[i] += dp;
-            //mPositionsStar[i] = glm::clamp(mPositionsStar[i], mAABB.min + 2.0f * mParticleRadius, mAABB.max - 2.0f * mParticleRadius);
         }
 
     }
 
+    //TODO add vorticity
+
+    //recompute the density or take the one from the initial guess?
+    std::vector<float> densities = std::vector<float>(mNumParticles, 0.0f);
+    for (int i = 0; i < mNumParticles; i++) {
+        float density = 0.0f;
+        for (int j = 0; j < mNeighbors[i].size(); j++) {
+            glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
+            density += mMass * mCubicKernel.W(glm::length(ij));
+        }
+        density += mMass * mCubicKernel.W(0.0f);
+        densities[i] = density;
+    }
+
+    std::vector<glm::vec3> angularVelocities(mNumParticles);
+    for (int i = 0; i < mNumParticles; i++) {
+        angularVelocities[i] = {0, 0, 0};
+        for (int j = 0; j < mNeighbors[i].size(); j++) {
+            glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
+            glm::vec3 vij = mVelocities[mNeighbors[i][j]] - mVelocities[i];
+            angularVelocities[i] += glm::cross(vij, mCubicKernel.WGrad(ij));
+        }
+    }
+
     for (int i = 0; i < mNumParticles; i++) {
         mVelocities[i] = (mPositionsStar[i] - mPositions[i]) / mTimeStep;
+
+        //vorticity confinment
+
+        //xsph viscosity
+        glm::vec3 viscosity = {0, 0, 0};
+        for (int j = 0; j < mNeighbors[i].size(); j++) {
+            glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
+            glm::vec3 vij = mVelocities[mNeighbors[i][j]] - mVelocities[i];
+            if (densities[mNeighbors[i][j]] > 0.0f)
+                viscosity += vij * (mMass / densities[mNeighbors[i][j]]) * mCubicKernel.W(glm::length(ij));
+        }
+        mVelocities[i] += viscosity * mCXsph;
+
+
         mPositions[i] = mPositionsStar[i];
     }
 
     mSolverCycles = stop_tsc(mSolverCycles);
-        /*
-        //update prediction
-        //mPositionsStar[i] += pressure_force;
-        //CHECK_NAN_VEC(mPositionsStar[i]);
-
-        //update velocity
-        mPositionsStar[i] = glm::clamp(mPositionsStar[i], mAABB.min + mParticleRadius, mAABB.max - mParticleRadius);
-        CHECK_NAN_VEC(mPositionsStar[i]);
-
-        mVelocities[i] = (mPositionsStar[i] - mPositions[i]) / mTimeStep;
-        
-        CHECK_NAN_VEC(mVelocities[i]);
-
-        mPositions[i] = mPositionsStar[i];
-        //mPositions[i] = glm::clamp(mPositions[i], mAABB.min + mParticleRadius, mAABB.max - mParticleRadius);
-        */
     
 }
 

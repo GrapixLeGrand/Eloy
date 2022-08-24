@@ -4,12 +4,12 @@
 #include "LevekGL.hpp"
 #include "Eloy.hpp"
 
-int resolutionX = 1280;
-int resolutionY = 720;
+int resolutionX = 1920;
+int resolutionY = 1080;
 
 int main(int argc, char** argv) {
     
-    Levek::RenderingEngine* engine = new Levek::RenderingEngine(resolutionX, resolutionY);
+    Levek::RenderingEngine* engine = new Levek::RenderingEngine(resolutionX, resolutionY, true);
     Levek::WindowController* windowController = engine->getWindowController();
     Levek::InputController* inputController = engine->getInputController();
     Levek::Renderer* renderer = engine->getRenderer();
