@@ -101,6 +101,10 @@ struct ParticlesPipelineSate {
 		renderer->drawInstances(particlesVA, sphereIBO, &shaderInstances, size);
 	}
 
+	void draw(Levek::FrameBuffer* fb, Levek::Renderer* renderer) {
+		renderer->drawInstances(fb, particlesVA, sphereIBO, &shaderInstances, size);
+	}
+
 	void setUniforms(
 		const glm::mat4& vp,
 		const glm::mat4& p,

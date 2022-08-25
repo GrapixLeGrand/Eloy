@@ -46,6 +46,9 @@ private:
     std::vector<glm::vec3> mVelocities;
     std::vector<glm::vec3> mPositions;
     std::vector<glm::vec3> mPositionsStar;
+    std::vector<float> mDensities;
+    std::vector<glm::vec3> mAngularVelocities;
+
     std::vector<std::vector<int>> mNeighbors;
     std::vector<float> mLambdas;
     std::vector<glm::vec3> mPressures;

@@ -4,12 +4,12 @@
 #include "LevekGL.hpp"
 #include "Eloy.hpp"
 
-int resolutionX = 1920;
-int resolutionY = 1080;
+int resolutionX = 1280;
+int resolutionY = 720;
 
 int main(int argc, char** argv) {
     
-    Levek::RenderingEngine* engine = new Levek::RenderingEngine(resolutionX, resolutionY, true);
+    Levek::RenderingEngine* engine = new Levek::RenderingEngine(resolutionX, resolutionY);
     Levek::WindowController* windowController = engine->getWindowController();
     Levek::InputController* inputController = engine->getInputController();
     Levek::Renderer* renderer = engine->getRenderer();
@@ -41,13 +41,29 @@ int main(int argc, char** argv) {
     Eloy::ParticlesPipelineSate particleRendering(engine, particleEngine.getPositions(), particleEngine.getColors(), err);
     Eloy::EngineImGui engineImGui(particleEngine);
 
+    Levek::FrameBuffer mainFb(resolutionX, resolutionY);
+    Levek::Texture sceneResult(resolutionX, resolutionY, Levek::TextureParameters::TextureType::RGB);
+    Levek::Texture sceneDepthStencil(resolutionX, resolutionY, Levek::TextureParameters::TextureType::DEPTH);
+    
+
+    mainFb.addAttachment(&sceneResult, Levek::FrameBufferProperties::AttachementType::COLOR);
+    //mainFb.addColorAttachment(&sceneResult, 0);
+    mainFb.addAttachment(&sceneDepthStencil, Levek::FrameBufferProperties::AttachementType::DEPTH);
+
+
     while (!windowController->exit() && !inputController->isKeyPressed(Levek::LEVEK_KEY_Q)) {
         renderer->clear();
+        //mainFb.clear();
+        //sceneResult.clear({0, 0, 0, 0});
+        //sceneDepthStencil.clear(1.0f);
+
         camera.updateCameraOrientation(inputController, windowController);
         camera.updateCameraTargetWASD(inputController, windowController->getDeltaTime());
-            
-        skybox.draw(renderer, camera.getView(), camera.getProjection());
-        ground.draw(renderer, camera.getViewProjection());
+        sceneResult.clear({0, 0, 0, 0});
+        sceneDepthStencil.clear(1.0f);
+
+        skybox.draw(&mainFb, renderer, camera.getView(), camera.getProjection());
+        ground.draw(&mainFb, renderer, camera.getViewProjection());
         
         particleEngine.step();
         particleRendering.updatePositions(particleEngine.getPositions());
@@ -61,8 +77,11 @@ int main(int argc, char** argv) {
             glm::vec3(0, -1, 0),
             particleEngine.getDiameter()
         );
-        particleRendering.draw(renderer);
+        particleRendering.draw(&mainFb, renderer);
 
+        renderer->draw(&sceneResult, {0.0, 0.0}, {1, 1});
+
+        
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
@@ -82,7 +101,7 @@ int main(int argc, char** argv) {
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
+        
         inputController->poll();
         windowController->swapBuffers();
     }

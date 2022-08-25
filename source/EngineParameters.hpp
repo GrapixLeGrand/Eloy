@@ -43,7 +43,7 @@ public:
     float mSCorrK                   = static_cast<float>(0.029);
     float mSCorrN                   = static_cast<float>(5);//1.57
     float mCXsph                    = static_cast<float>(0.1);
-    float mEpsilonVorticity         = static_cast<float>(0.05);
+    float mEpsilonVorticity         = static_cast<float>(0.175);
     int mSubsteps                   = 2;
 
     std::vector<IParticlesData*> mParticlesData;

@@ -46,7 +46,7 @@ public:
             ImGui::SliderFloat("SCoorN", &engine.mSCorrN, 0.01f, 5.0f, "%.3f");
 
             ImGui::SliderFloat("Xsph", &engine.mCXsph, 0.0001f, 1.0f, "%.3f");
-            ImGui::SliderFloat("epsilon vorticity", &engine.mEpsilonVorticity, 0.01f, 5.0f, "%.3f");
+            ImGui::SliderFloat("epsilon vorticity", &engine.mEpsilonVorticity, 0.01f, 1.0f, "%.3f");
             ImGui::SliderFloat("time step", &engine.mTimeStep, 0.001f, 0.08f, "%.3f");
             quit = ImGui::Button("reset");
 

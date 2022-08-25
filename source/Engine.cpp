@@ -18,7 +18,7 @@ Engine::Engine(const EngineParameters& parameters) {
 
     mParticleRadius = parameters.mParticuleRadius;
     mParticleDiameter = parameters.mParticuleRadius * static_cast<float>(2);
-    mKernelRadius = parameters.mKernelRadius;//static_cast<float>(3.1) * mParticleRadius;
+    mKernelRadius = parameters.mKernelRadius;
     mkernelFactor = parameters.mKernelFactor;
     mBoundaryCollisionCoeff = parameters.mBoundaryCollisionCoeff;
 
@@ -42,11 +42,20 @@ Engine::Engine(const EngineParameters& parameters) {
     for (const IParticlesData* data : parameters.mParticlesData) {
         data->addParticlesData(this);
     }
+    
+    mPositionsStar = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
+    mLambdas = std::vector<float>(mNumParticles, static_cast<float>(0));
+    mPressures = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
+    mDensities = std::vector<float>(mNumParticles, static_cast<float>(0));
+    mAngularVelocities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
 
     std::fill(mVelocities.begin(), mVelocities.end(), glm::vec3(0));
     std::fill(mPositionsStar.begin(), mPositionsStar.end(), glm::vec3(0));
     std::fill(mLambdas.begin(), mLambdas.end(), static_cast<float>(0));
     std::fill(mPressures.begin(), mPressures.end(), glm::vec3(0));
+    std::fill(mDensities.begin(), mDensities.end(), static_cast<float>(0.0f));
+    std::fill(mAngularVelocities.begin(), mAngularVelocities.end(), glm::vec3(0));
+
     mNeighbors = std::vector<std::vector<int>>(mNumParticles, std::vector<int>{});
     mCellSize = mKernelRadius;
 
@@ -57,8 +66,6 @@ Engine::Engine(const EngineParameters& parameters) {
     mNumGridCells = mGridX * mGridY * mGridZ;
     mUniformGrid = std::vector<std::vector<int>>(mNumGridCells, std::vector<int>{});
 
-    //mMass = 3000.0f / mNumParticles;
-    //mSCorrK = mMass * 1.0e-04f;
 }
 
 #define CHECK_NAN_VEC(V) \
@@ -171,7 +178,6 @@ void Engine::step() {
         for (int i = 0; i < mNumParticles; i++) {
 
             //equation 13 (applying pressure force correction)
-            //glm::vec3 pressure_force = glm::vec3(0.0);
             mPressures[i] = glm::vec3(0);
             for (int j = 0; j < mNeighbors[i].size(); j++) {
                 glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
@@ -185,7 +191,7 @@ void Engine::step() {
         }
 
         for (int i = 0; i < mNumParticles; i++) {
-             mPositionsStar[i] += mPressures[i];
+            mPositionsStar[i] += mPressures[i];
         }
 
         for (int i = 0; i < mNumParticles; i++) {
@@ -201,10 +207,9 @@ void Engine::step() {
 
     }
 
-    //TODO add vorticity
 
     //recompute the density or take the one from the initial guess?
-    std::vector<float> densities = std::vector<float>(mNumParticles, 0.0f);
+    //std::vector<float> densities = std::vector<float>(mNumParticles, 0.0f);
     for (int i = 0; i < mNumParticles; i++) {
         float density = 0.0f;
         for (int j = 0; j < mNeighbors[i].size(); j++) {
@@ -212,16 +217,16 @@ void Engine::step() {
             density += mMass * mCubicKernel.W(glm::length(ij));
         }
         density += mMass * mCubicKernel.W(0.0f);
-        densities[i] = density;
+        mDensities[i] = density;
     }
 
-    std::vector<glm::vec3> angularVelocities(mNumParticles);
+    //std::vector<glm::vec3> angularVelocities(mNumParticles);
     for (int i = 0; i < mNumParticles; i++) {
-        angularVelocities[i] = {0, 0, 0};
+        mAngularVelocities[i] = {0, 0, 0};
         for (int j = 0; j < mNeighbors[i].size(); j++) {
             glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
             glm::vec3 vij = mVelocities[mNeighbors[i][j]] - mVelocities[i];
-            angularVelocities[i] += glm::cross(vij, mCubicKernel.WGrad(ij));
+            mAngularVelocities[i] += glm::cross(vij, mCubicKernel.WGrad(ij)) * (mMass / mDensities[i]);
         }
     }
 
@@ -229,14 +234,25 @@ void Engine::step() {
         mVelocities[i] = (mPositionsStar[i] - mPositions[i]) / mTimeStep;
 
         //vorticity confinment
+        glm::vec3 N = {0, 0, 0};
+        for (int j = 0; j < mNeighbors[i].size(); j++) {
+            glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
+            N += mCubicKernel.WGrad(ij) * (mMass / mDensities[i]) * glm::length(mAngularVelocities[mNeighbors[i][j]]);
+        }
+        float NLength = glm::length(N);
+        if (NLength > 0.0f) {
+            N /= NLength;
+            glm::vec3 vorticity = glm::cross(N, mAngularVelocities[i]) * mEpsilonVorticity;
+            mVelocities[i] += mTimeStep * mMass * vorticity; 
+        }
 
         //xsph viscosity
         glm::vec3 viscosity = {0, 0, 0};
         for (int j = 0; j < mNeighbors[i].size(); j++) {
             glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
             glm::vec3 vij = mVelocities[mNeighbors[i][j]] - mVelocities[i];
-            if (densities[mNeighbors[i][j]] > 0.0f)
-                viscosity += vij * (mMass / densities[mNeighbors[i][j]]) * mCubicKernel.W(glm::length(ij));
+            if (mDensities[mNeighbors[i][j]] > 0.0f)
+                viscosity += vij * (mMass / mDensities[mNeighbors[i][j]]) * mCubicKernel.W(glm::length(ij));
         }
         mVelocities[i] += viscosity * mCXsph;
 
@@ -249,12 +265,9 @@ void Engine::step() {
 }
 
 void Engine::resize(size_t newSize) {
-    mPositionsStar.resize(newSize);
     mPositions.resize(newSize);
     mVelocities.resize(newSize);
-    mLambdas.resize(newSize);
     mColors.resize(newSize);
-    mPressures.resize(newSize);
 }
 
 inline int Engine::get_cell_id(glm::vec3 position) {
@@ -304,23 +317,26 @@ void Engine::findNeighborsUniformGrid() {
                     continue;
                 }
 
-                for (int y = -1; y <= 1; y++) {
-                    for (int x = -1; x <= 1; x++) {
-                        for (int z = -1; z <= 1; z++) {
-                            
-                            if (
-                                check_index(xx + x, 0, mGridX) == false ||
-                                check_index(yy + y, 0, mGridY) == false ||
-                                check_index(zz + z, 0, mGridZ) == false
-                            )
-                            {
-                                continue;
-                            }
+                int yLower = yy - 1; int yUpper = yy + 1;
+                int xLower = xx - 1; int xUpper = xx + 1;
+                int zLower = zz - 1; int zUpper = zz + 1;
+
+                yLower = (yLower >= 0) ? yLower : 0; 
+                xLower = (xLower >= 0) ? xLower : 0;
+                zLower = (zLower >= 0) ? zLower : 0;
+
+                yUpper = (yUpper >= mGridY) ? mGridY - 1 : yUpper;
+                xUpper = (xUpper >= mGridX) ? mGridX - 1 : xUpper;
+                zUpper = (zUpper >= mGridZ) ? mGridZ - 1 : zUpper;
+
+                for (int y = yLower; y <= yUpper; y++) {
+                    for (int x = xLower; x <= xUpper; x++) {
+                        for (int z = zLower; z <= zUpper; z++) {
 
                             int neighbor_cell_id =
-                                (yy + y) * mGridX * mGridZ +
-                                (xx + x) * mGridZ + 
-                                (zz + z);
+                                y * mGridX * mGridZ +
+                                x * mGridZ + 
+                                z;
 
                             if (mUniformGrid[neighbor_cell_id].empty() == true) {
                                 continue;
