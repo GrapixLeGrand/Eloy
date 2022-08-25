@@ -192,9 +192,6 @@ void Engine::step() {
 
         for (int i = 0; i < mNumParticles; i++) {
             mPositionsStar[i] += mPressures[i];
-        }
-
-        for (int i = 0; i < mNumParticles; i++) {
             glm::vec3 dp = glm::vec3(0.0);
             dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(1, 0, 0), glm::vec3(0, 0, 0), mPositionsStar[i], mParticleRadius);
             dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(-1, 0, 0), glm::vec3(mX, 0, 0), mPositionsStar[i], mParticleRadius);
@@ -209,21 +206,20 @@ void Engine::step() {
 
 
     //recompute the density or take the one from the initial guess?
-    //std::vector<float> densities = std::vector<float>(mNumParticles, 0.0f);
+    //we do the density and the vorticity in the same loop to better utilize the cache
     for (int i = 0; i < mNumParticles; i++) {
-        float density = 0.0f;
+        mDensities[i] = 0.0f;
+        
         for (int j = 0; j < mNeighbors[i].size(); j++) {
+            //density
             glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
-            density += mMass * mCubicKernel.W(glm::length(ij));
+            mDensities[i] += mMass * mCubicKernel.W(glm::length(ij));
         }
-        density += mMass * mCubicKernel.W(0.0f);
-        mDensities[i] = density;
-    }
+        mDensities[i] += mMass * mCubicKernel.W(0.0f);
 
-    //std::vector<glm::vec3> angularVelocities(mNumParticles);
-    for (int i = 0; i < mNumParticles; i++) {
         mAngularVelocities[i] = {0, 0, 0};
         for (int j = 0; j < mNeighbors[i].size(); j++) {
+            //angular velocity
             glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
             glm::vec3 vij = mVelocities[mNeighbors[i][j]] - mVelocities[i];
             mAngularVelocities[i] += glm::cross(vij, mCubicKernel.WGrad(ij)) * (mMass / mDensities[i]);
@@ -255,8 +251,6 @@ void Engine::step() {
                 viscosity += vij * (mMass / mDensities[mNeighbors[i][j]]) * mCubicKernel.W(glm::length(ij));
         }
         mVelocities[i] += viscosity * mCXsph;
-
-
         mPositions[i] = mPositionsStar[i];
     }
 
