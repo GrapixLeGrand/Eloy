@@ -24,6 +24,9 @@ public:
 
             ImGui::Text("%d particles %lf MCycles", engine.mNumParticles, solverCycles);
             ImGui::Text("%d cells %lf MCycles", engine.mNumGridCells, neighborsCycles);
+
+            ImGui::Text("particles %lf ms", engine.mSolverMs);
+            ImGui::Text("cells %lf ms", engine.mNeighborMs);
             
             ImGui::Text("particle radius %.3f", engine.mParticleRadius);
             ImGui::Text("particle diameter %.3f", engine.mParticleDiameter);

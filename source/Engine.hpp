@@ -5,12 +5,25 @@
 #include "Kernels.hpp"
 #include "AABB.hpp"
 
+#include <unordered_set>
 
 namespace Eloy {
 
 class EngineParameters;
 
 class Engine {
+public:
+
+    enum SolverMode {
+       BASIC_SINGLE_CORE,
+       BASIC_MULTI_CORE 
+    };
+
+    enum NeighborMode {
+       VERLET_BASIC,
+       VERLET_MINIMAL 
+    };
+
 private:
 
     int mX = 0, mY = 0, mZ = 0;
@@ -48,6 +61,7 @@ private:
     std::vector<glm::vec3> mPositionsStar;
     std::vector<float> mDensities;
     std::vector<glm::vec3> mAngularVelocities;
+    std::vector<glm::vec3> mParallelViscosities;
 
     std::vector<std::vector<int>> mNeighbors;
     std::vector<float> mLambdas;
@@ -58,12 +72,19 @@ private:
     float mCellSize = static_cast<float>(0); //size of side length of a single grid cell
     int mNumGridCells = 0; //total amount of grid cells
 
+    std::unordered_set<int> mCellsUsedSet;
+    std::vector<int> mCellsUsedStorage;
+    std::vector<std::vector<int>> mCellsPrecomputedNeighbors;
+
     int mNumParticles = 0;
 
     //utilitary functions
     inline float s_coor(float rl);
     inline float resolve_collision(float value, float min, float max);
     void findNeighborsUniformGrid();
+
+    void findNeighborsUniformGridMinimalStrategy();
+
     inline void clearNeighbors();
     inline int get_cell_id(glm::vec3 position);
     inline bool check_index(int i, int min, int max);
@@ -73,23 +94,24 @@ private:
     //for profiling
     unsigned long long mSolverCycles = 0;
     unsigned long long mNeighborCycles = 0;
-    
-    void stepBasisSingleThreaded();
-    void stepBasisMultiThreaded();
 
+    double mSolverMs = 0.0;
+    double mNeighborMs = 0.0;
+    
+    void stepBasisSingleThreaded(NeighborMode mode);
+    void stepBasisMultiThreaded(NeighborMode mode);
+    
+    void findNeighbors(NeighborMode mode);
 public:
 
-    enum SolverMode {
-       BASIC_SINGLE_CORE,
-       BASIC_MULTI_CORE 
-    };
+
 
 friend class IParticlesData;
 friend class AABBParticlesData;
 friend class EngineImGui;
 
 Engine(const EngineParameters& parameters);
-void step(SolverMode mode = BASIC_SINGLE_CORE);
+void step(SolverMode solverMode = BASIC_SINGLE_CORE, NeighborMode neighborMode = VERLET_BASIC);
 
 
 const std::vector<glm::vec3>& getPositions() const;

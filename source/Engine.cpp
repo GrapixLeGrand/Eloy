@@ -1,6 +1,7 @@
 #include "Eloy.hpp"
 
 #include <algorithm>
+#include <chrono>
 
 #include "glm/gtc/constants.hpp"
 #include "EngineParameters.hpp"
@@ -51,13 +52,7 @@ Engine::Engine(const EngineParameters& parameters) {
     mPressures = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
     mDensities = std::vector<float>(mNumParticles, static_cast<float>(0));
     mAngularVelocities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
-
-    std::fill(mVelocities.begin(), mVelocities.end(), glm::vec3(0));
-    std::fill(mPositionsStar.begin(), mPositionsStar.end(), glm::vec3(0));
-    std::fill(mLambdas.begin(), mLambdas.end(), static_cast<float>(0));
-    std::fill(mPressures.begin(), mPressures.end(), glm::vec3(0));
-    std::fill(mDensities.begin(), mDensities.end(), static_cast<float>(0.0f));
-    std::fill(mAngularVelocities.begin(), mAngularVelocities.end(), glm::vec3(0));
+    mParallelViscosities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
 
     mNeighbors = std::vector<std::vector<int>>(mNumParticles, std::vector<int>{});
     mCellSize = mKernelRadius;
@@ -68,6 +63,43 @@ Engine::Engine(const EngineParameters& parameters) {
 
     mNumGridCells = mGridX * mGridY * mGridZ;
     mUniformGrid = std::vector<std::vector<int>>(mNumGridCells, std::vector<int>{});
+
+    {//minimal strategy
+        mCellsUsedStorage.reserve(mNumGridCells);
+        mCellsPrecomputedNeighbors = std::vector<std::vector<int>>(mNumGridCells, std::vector<int>{});
+        for (int y = 0; y < mGridY; y++) {
+            for (int x = 0; x < mGridX; x++) {
+                for (int z = 0; z < mGridZ; z++) {
+                    
+                    int index = y * mGridX * mGridZ + x * mGridZ + z;
+
+                    int yLower = y - 1; int yUpper = y + 1;
+                    int xLower = x - 1; int xUpper = x + 1;
+                    int zLower = z - 1; int zUpper = z + 1;
+
+                    yLower = (yLower >= 0) ? yLower : 0; 
+                    xLower = (xLower >= 0) ? xLower : 0;
+                    zLower = (zLower >= 0) ? zLower : 0;
+
+                    yUpper = (yUpper >= mGridY) ? mGridY - 1 : yUpper;
+                    xUpper = (xUpper >= mGridX) ? mGridX - 1 : xUpper;
+                    zUpper = (zUpper >= mGridZ) ? mGridZ - 1 : zUpper;
+
+                    for (int yy = yLower; yy <= yUpper; yy++) {
+                        for (int xx = xLower; xx <= xUpper; xx++) {
+                            for (int zz = zLower; zz <= zUpper; zz++) {
+                                int indexNeighbor = yy * mGridX * mGridZ + xx * mGridZ + zz;
+                                mCellsPrecomputedNeighbors[index].push_back(indexNeighbor);
+                            }
+                        }
+                    }
+
+
+                }
+            }
+        }
+
+    }
 
 }
 
@@ -120,21 +152,33 @@ inline glm::vec3 solve_boundary_collision_constraint(glm::vec3 n, glm::vec3 p0, 
     return dp;
 }
 
-
-void Engine::step(SolverMode mode) {
+void Engine::findNeighbors(NeighborMode mode) {
     switch (mode) {
-        case BASIC_SINGLE_CORE:
-            this->stepBasisSingleThreaded();
+        case VERLET_BASIC:
+            this->findNeighborsUniformGrid();
         break;
-        case BASIC_MULTI_CORE:
-            this->stepBasisMultiThreaded();
+        case VERLET_MINIMAL:
+            this->findNeighborsUniformGridMinimalStrategy();
         break;
         default:
         assert(false);
     }
 }
 
-void Engine::stepBasisMultiThreaded() {
+void Engine::step(SolverMode solverMode, NeighborMode neighborMode) {
+    switch (solverMode) {
+        case BASIC_SINGLE_CORE:
+            this->stepBasisSingleThreaded(neighborMode);
+        break;
+        case BASIC_MULTI_CORE:
+            this->stepBasisMultiThreaded(neighborMode);
+        break;
+        default:
+        assert(false);
+    }
+}
+
+void Engine::stepBasisMultiThreaded(NeighborMode mode) {
 
     //integration
     #pragma omp parallel for schedule(static)
@@ -146,10 +190,18 @@ void Engine::stepBasisMultiThreaded() {
     }
 
     mNeighborCycles = start_tsc();
-    findNeighborsUniformGrid();
+
+    auto startNeigbors = std::chrono::steady_clock::now();
+
+    findNeighbors(mode);
+
+    auto endNeigbors = std::chrono::steady_clock::now();
+    mNeighborMs = std::chrono::duration<double, std::milli> (endNeigbors - startNeigbors).count();
+
     mNeighborCycles = stop_tsc(mNeighborCycles);
 
     mSolverCycles = start_tsc();
+    auto startSolver = std::chrono::steady_clock::now();
 
     for (int s = 0; s < mSubsteps; s++) {
 
@@ -265,30 +317,30 @@ void Engine::stepBasisMultiThreaded() {
         }
     }
 
-    std::vector<glm::vec3> viscosities(mNumParticles);
-
     #pragma omp parallel for schedule(static)
     for (int i = 0; i < mNumParticles; i++) {
         //xsph viscosity
-        viscosities[i] = {0, 0, 0};
+        mParallelViscosities[i] = {0, 0, 0};
         for (int j = 0; j < mNeighbors[i].size(); j++) {
             glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
             glm::vec3 vij = mVelocities[mNeighbors[i][j]] - mVelocities[i];
             if (mDensities[mNeighbors[i][j]] > 0.0f)
-                viscosities[i] += vij * (mMass / mDensities[mNeighbors[i][j]]) * mCubicKernel.W(glm::length(ij));
+                mParallelViscosities[i] += vij * (mMass / mDensities[mNeighbors[i][j]]) * mCubicKernel.W(glm::length(ij));
         }
     }
 
     #pragma omp parallel for schedule(static)
     for (int i = 0; i < mNumParticles; i++) {
-        mVelocities[i] += viscosities[i] * mCXsph;
+        mVelocities[i] += mParallelViscosities[i] * mCXsph;
         mPositions[i] = mPositionsStar[i];
     }
 
+    auto endSolver = std::chrono::steady_clock::now();
+    mSolverMs = std::chrono::duration<double, std::milli> (endSolver - startSolver).count();
     mSolverCycles = stop_tsc(mSolverCycles);
 }
 
-void Engine::stepBasisSingleThreaded() {
+void Engine::stepBasisSingleThreaded(NeighborMode mode) {
 
     //integration
     for (int i = 0; i < mNumParticles; i++) {
@@ -299,7 +351,7 @@ void Engine::stepBasisSingleThreaded() {
     }
 
     mNeighborCycles = start_tsc();
-    findNeighborsUniformGrid();
+    findNeighbors(mode);
     mNeighborCycles = stop_tsc(mNeighborCycles);
 
     mSolverCycles = start_tsc();
@@ -533,6 +585,52 @@ void Engine::findNeighborsUniformGrid() {
 
 }
 
+
+void Engine::findNeighborsUniformGridMinimalStrategy() {
+
+    mCellsUsedSet.clear();
+    mCellsUsedStorage.clear();
+
+    for (int i = 0; i < mNumParticles; i++) {
+        mNeighbors[i].clear();
+    }
+
+    for (int i = 0; i < mNumGridCells; i++) {
+        mUniformGrid[i].clear();
+    }
+
+    for (int i = 0; i < mNumParticles; i++) {
+        int cell_id = get_cell_id(mPositionsStar[i]);
+        mUniformGrid[cell_id].push_back(i);
+        if (mCellsUsedSet.find(cell_id) == mCellsUsedSet.end()) {
+            mCellsUsedSet.insert(cell_id);
+            mCellsUsedStorage.push_back(cell_id);
+        }
+    }
+
+    for (int cellId : mCellsUsedStorage) {
+        for (int neighborCellId : mCellsPrecomputedNeighbors[cellId]) {
+            
+            if (mUniformGrid[neighborCellId].empty() == true) {
+                continue;
+            }
+
+            for (int i = 0; i < mUniformGrid[cellId].size(); i++) {
+                const int current_index = mUniformGrid[cellId][i];
+                const glm::vec3& self = mPositionsStar[current_index];
+                for (int j = 0; j < mUniformGrid[neighborCellId].size(); j++) {
+                    const int neighbor_index = mUniformGrid[neighborCellId][j];
+                    const glm::vec3& other = mPositionsStar[neighbor_index];
+                    const glm::vec3 tmp = self - other;
+                    if (glm::dot(tmp, tmp) <= mKernelRadius * mKernelRadius) {
+                        mNeighbors[current_index].push_back(neighbor_index);
+                    }
+                }
+            } //end distance check
+
+        }
+    }
+}
 
 void Engine::getParameters(EngineParameters& out) const {
 
