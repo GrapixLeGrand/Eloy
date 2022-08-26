@@ -74,14 +74,22 @@ private:
     unsigned long long mSolverCycles = 0;
     unsigned long long mNeighborCycles = 0;
     
+    void stepBasisSingleThreaded();
+    void stepBasisMultiThreaded();
 
 public:
+
+    enum SolverMode {
+       BASIC_SINGLE_CORE,
+       BASIC_MULTI_CORE 
+    };
+
 friend class IParticlesData;
 friend class AABBParticlesData;
 friend class EngineImGui;
 
 Engine(const EngineParameters& parameters);
-void step();
+void step(SolverMode mode = BASIC_SINGLE_CORE);
 
 
 const std::vector<glm::vec3>& getPositions() const;

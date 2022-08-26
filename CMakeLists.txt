@@ -36,6 +36,11 @@ target_include_directories(Eloy ${ELOY_TARGET_INCLUDE_DIRS})
 
 target_link_libraries(Eloy LevekGL)
 
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(Eloy OpenMP::OpenMP_CXX)
+endif()
+
 add_compile_definitions(ELOY_SOURCE_DIRECTORY="${Eloy_SOURCE_DIR}/source")
 
 add_subdirectory(samples)

@@ -6,6 +6,9 @@
 #include "EngineParameters.hpp"
 #include "profiling/tsc_x86.hpp"
 
+#include "omp.h"
+
+
 namespace Eloy {    
 
 Engine::Engine(const EngineParameters& parameters) {
@@ -118,7 +121,174 @@ inline glm::vec3 solve_boundary_collision_constraint(glm::vec3 n, glm::vec3 p0, 
 }
 
 
-void Engine::step() {
+void Engine::step(SolverMode mode) {
+    switch (mode) {
+        case BASIC_SINGLE_CORE:
+            this->stepBasisSingleThreaded();
+        break;
+        case BASIC_MULTI_CORE:
+            this->stepBasisMultiThreaded();
+        break;
+        default:
+        assert(false);
+    }
+}
+
+void Engine::stepBasisMultiThreaded() {
+
+    //integration
+    #pragma omp parallel for schedule(static)
+    for (int i = 0; i < mNumParticles; i++) {
+        mVelocities[i] += mGravity * mMass * mTimeStep;
+        CHECK_NAN_VEC(mVelocities[i]);
+        mPositionsStar[i] = mPositions[i] + mVelocities[i] * mTimeStep; //prediction
+        CHECK_NAN_VEC(mPositionsStar[i]);
+    }
+
+    mNeighborCycles = start_tsc();
+    findNeighborsUniformGrid();
+    mNeighborCycles = stop_tsc(mNeighborCycles);
+
+    mSolverCycles = start_tsc();
+
+    for (int s = 0; s < mSubsteps; s++) {
+
+        //solve pressure
+        #pragma omp parallel for schedule(static)
+        for (int i = 0; i < mNumParticles; i++) {
+
+            float densitiy = 0.0;
+            for (int j = 0; j < mNeighbors[i].size(); j++) {
+                glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
+                float len = glm::length(ij);
+                densitiy += mMass * mCubicKernel.W(len);
+                CHECK_NAN_VEC(ij);
+            }
+            densitiy += mMass * mCubicKernel.W(0.0f);
+
+            //equation 1
+            float constraint_i = (densitiy / mRestDensity) - static_cast<float>(1);
+            float constraint_gradient_sum = static_cast<float>(0);
+            glm::vec3 grad_current_p = glm::vec3(0.0);
+
+            CHECK_NAN_VAL(constraint_i);
+            
+            //equation 8
+            for (int j = 0; j < mNeighbors[i].size(); j++) {
+                glm::vec3 temp = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
+                glm::vec3 neighbor_grad = -(mMass / mRestDensity) * mCubicKernel.WGrad(temp);
+                CHECK_NAN_VEC(neighbor_grad);
+                constraint_gradient_sum += glm::dot(neighbor_grad, neighbor_grad);
+                grad_current_p -= neighbor_grad;
+            }
+
+            CHECK_NAN_VEC(grad_current_p);
+            constraint_gradient_sum += glm::dot(grad_current_p, grad_current_p);
+
+            mLambdas[i] = static_cast<float>(0);
+            if (constraint_gradient_sum > 0.0f) {
+                mLambdas[i] = -constraint_i / (constraint_gradient_sum + mRelaxationEpsilon);
+                CHECK_NAN_VAL(mLambdas[i]);
+            }
+
+        }
+
+        #pragma omp parallel for schedule(static)
+        for (int i = 0; i < mNumParticles; i++) {
+
+            //equation 13 (applying pressure force correction)
+            mPressures[i] = glm::vec3(0);
+            for (int j = 0; j < mNeighbors[i].size(); j++) {
+                glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
+                CHECK_NAN_VEC(ij);
+                mPressures[i] += (mLambdas[i] + mLambdas[j] + s_coor(glm::length(ij))) * mCubicKernel.WGrad(ij); //
+                CHECK_NAN_VEC(mPressures[i]);
+            }
+
+            mPressures[i] *= (1.0f / (mRestDensity * mMass));
+            
+        }
+
+        #pragma omp parallel for schedule(static)
+        for (int i = 0; i < mNumParticles; i++) {
+            mPositionsStar[i] += mPressures[i];
+            glm::vec3 dp = glm::vec3(0.0);
+            dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(1, 0, 0), glm::vec3(0, 0, 0), mPositionsStar[i], mParticleRadius);
+            dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(-1, 0, 0), glm::vec3(mX, 0, 0), mPositionsStar[i], mParticleRadius);
+            dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, 1, 0), glm::vec3(0, 0, 0), mPositionsStar[i], mParticleRadius);
+            dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, -1, 0), glm::vec3(0, mY, 0), mPositionsStar[i], mParticleRadius);
+            dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, 0, 1), glm::vec3(0, 0, 0), mPositionsStar[i], mParticleRadius);
+            dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, 0, -1), glm::vec3(0, 0, mZ), mPositionsStar[i], mParticleRadius);
+            mPositionsStar[i] += dp;
+        }
+
+    }
+
+
+    //recompute the density or take the one from the initial guess?
+    //we do the density and the vorticity in the same loop to better utilize the cache
+    #pragma omp parallel for schedule(static)
+    for (int i = 0; i < mNumParticles; i++) {
+        mDensities[i] = 0.0f;
+        
+        for (int j = 0; j < mNeighbors[i].size(); j++) {
+            //density
+            glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
+            mDensities[i] += mMass * mCubicKernel.W(glm::length(ij));
+        }
+        mDensities[i] += mMass * mCubicKernel.W(0.0f);
+
+        mAngularVelocities[i] = {0, 0, 0};
+        for (int j = 0; j < mNeighbors[i].size(); j++) {
+            //angular velocity
+            glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
+            glm::vec3 vij = mVelocities[mNeighbors[i][j]] - mVelocities[i];
+            mAngularVelocities[i] += glm::cross(vij, mCubicKernel.WGrad(ij)) * (mMass / mDensities[i]);
+        }
+    }
+
+    #pragma omp parallel for schedule(static)
+    for (int i = 0; i < mNumParticles; i++) {
+        mVelocities[i] = (mPositionsStar[i] - mPositions[i]) / mTimeStep;
+        
+        //vorticity confinment
+        glm::vec3 N = {0, 0, 0};
+        for (int j = 0; j < mNeighbors[i].size(); j++) {
+            glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
+            N += mCubicKernel.WGrad(ij) * (mMass / mDensities[i]) * glm::length(mAngularVelocities[mNeighbors[i][j]]);
+        }
+        float NLength = glm::length(N);
+        if (NLength > 0.0f) {
+            N /= NLength;
+            glm::vec3 vorticity = glm::cross(N, mAngularVelocities[i]) * mEpsilonVorticity;
+            mVelocities[i] += mTimeStep * mMass * vorticity; 
+        }
+    }
+
+    std::vector<glm::vec3> viscosities(mNumParticles);
+
+    #pragma omp parallel for schedule(static)
+    for (int i = 0; i < mNumParticles; i++) {
+        //xsph viscosity
+        viscosities[i] = {0, 0, 0};
+        for (int j = 0; j < mNeighbors[i].size(); j++) {
+            glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
+            glm::vec3 vij = mVelocities[mNeighbors[i][j]] - mVelocities[i];
+            if (mDensities[mNeighbors[i][j]] > 0.0f)
+                viscosities[i] += vij * (mMass / mDensities[mNeighbors[i][j]]) * mCubicKernel.W(glm::length(ij));
+        }
+    }
+
+    #pragma omp parallel for schedule(static)
+    for (int i = 0; i < mNumParticles; i++) {
+        mVelocities[i] += viscosities[i] * mCXsph;
+        mPositions[i] = mPositionsStar[i];
+    }
+
+    mSolverCycles = stop_tsc(mSolverCycles);
+}
+
+void Engine::stepBasisSingleThreaded() {
 
     //integration
     for (int i = 0; i < mNumParticles; i++) {

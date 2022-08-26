@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
         skybox.draw(&mainFb, renderer, camera.getView(), camera.getProjection());
         ground.draw(&mainFb, renderer, camera.getViewProjection());
         
-        particleEngine.step();
+        particleEngine.step(Eloy::Engine::BASIC_MULTI_CORE);
         particleRendering.updatePositions(particleEngine.getPositions());
         particleRendering.updateColors(particleEngine.getColors());
 
