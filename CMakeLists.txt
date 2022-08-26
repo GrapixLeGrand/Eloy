@@ -29,7 +29,8 @@ add_library(Eloy STATIC ${ELOY_SOURCES})
 
 set(ELOY_TARGET_INCLUDE_DIRS
     PUBLIC "source"
-    PUBLIC "thirdparty/LevekGL"   
+    PUBLIC "thirdparty/LevekGL"
+    PUBLIC "thirdparty"
 )
 
 target_include_directories(Eloy ${ELOY_TARGET_INCLUDE_DIRS})
@@ -42,6 +43,7 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 add_compile_definitions(ELOY_SOURCE_DIRECTORY="${Eloy_SOURCE_DIR}/source")
+add_compile_definitions(ELOY_BUILD_DIRECTORY="${Eloy_BINARY_DIR}")
 
 add_subdirectory(samples)
 

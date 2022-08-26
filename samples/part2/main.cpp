@@ -18,28 +18,13 @@ int main(int argc, char** argv) {
 
     Levek::ArcballCamera camera;
     camera.setProjection(glm::perspective(glm::radians(45.0f), (resolutionX * 1.0f) / (1.0f * resolutionY), 0.01f, 1000.0f));
-    camera.setRotation(5.34f);
-    camera.setElevation(-0.59f);
-    camera.setTarget({9.260883f, 0.000000f, 5.517349f});
+    camera.setRotation(4.04f);
+    camera.setElevation(-0.57f);
+    camera.setTarget({16.360883f, 0.000000f, 12.17349f});
     camera.setViewDistance(35.0f);
 
     Levek::SkyBoxPipelineState skybox;
     Levek::GroundPipelineState ground(modelLoader, 150.0f, false);
-
-    Eloy::EngineParameters parameters;
-    //parameters.mParticuleRadius = 0.25f;
-    glm::vec3 min_pos = {0.5, 0.5, 0.5};
-    glm::vec3 max_pos = {5, 10, 5};
-    glm::vec3 offset = {3, 3, 3};
-    Eloy::AABBParticlesData aabb1(min_pos + offset, max_pos + offset, {1, 0, 0, 1});
-
-    parameters.mParticlesData.push_back(&aabb1);
-
-    Eloy::Engine particleEngine(parameters);
-    
-    Eloy::ErrorCode err = Eloy::ELOY_ERROR_OK;
-    Eloy::ParticlesPipelineSate particleRendering(engine, particleEngine.getPositions(), particleEngine.getColors(), err);
-    Eloy::EngineImGui engineImGui(particleEngine);
 
     Levek::FrameBuffer mainFb(resolutionX, resolutionY);
     Levek::Texture sceneResult(resolutionX, resolutionY, Levek::TextureParameters::TextureType::RGB);
@@ -50,6 +35,11 @@ int main(int argc, char** argv) {
     //mainFb.addColorAttachment(&sceneResult, 0);
     mainFb.addAttachment(&sceneDepthStencil, Levek::FrameBufferProperties::AttachementType::DEPTH);
 
+    auto particleSavedState = Eloy::getParticlesStateFromSaveJson();
+    Eloy::ErrorCode err = Eloy::ErrorCode::ELOY_ERROR_OK;
+    Eloy::ParticlesPipelineSate particleRendering(engine, particleSavedState.first, particleSavedState.second, err);
+
+    float imguiScaleFactor = 0.25f;
 
     while (!windowController->exit() && !inputController->isKeyPressed(Levek::LEVEK_KEY_Q)) {
         renderer->clear();
@@ -65,17 +55,14 @@ int main(int argc, char** argv) {
         skybox.draw(&mainFb, renderer, camera.getView(), camera.getProjection());
         ground.draw(&mainFb, renderer, camera.getViewProjection());
         
-        particleEngine.step();
-        particleRendering.updatePositions(particleEngine.getPositions());
-        particleRendering.updateColors(particleEngine.getColors());
-
+        
         particleRendering.setUniforms(
             camera.getViewProjection(),
             camera.getProjection(),
             camera.getView(),
             camera.getViewInv(),
             glm::vec3(0, -1, 0),
-            particleEngine.getDiameter()
+            0.2f
         );
         particleRendering.draw(&mainFb, renderer);
 
@@ -91,11 +78,8 @@ int main(int argc, char** argv) {
         fps += " fps";
         ImGui::Text(fps.c_str());
 
-        if (engineImGui.imgui()) {
-            particleEngine.getParameters(parameters);
-            particleEngine = Eloy::Engine(parameters);
-            //engineImGui = Eloy::EngineImGui(particleEngine);
-        }
+        ImGui::Image((void*)(intptr_t)sceneResult.getId(), ImVec2(static_cast<float>(resolutionX) * imguiScaleFactor, static_cast<float>(resolutionY) * imguiScaleFactor), ImVec2(0, 1), ImVec2(1, 0));
+        ImGui::Image((void*)(intptr_t)sceneDepthStencil.getId(), ImVec2(static_cast<float>(resolutionX) * imguiScaleFactor, static_cast<float>(resolutionY) * imguiScaleFactor), ImVec2(0, 1), ImVec2(1, 0));
 
         ImGui::End();
 

@@ -1,14 +1,13 @@
 #include "Eloy.hpp"
 
-#include <algorithm>
-#include <chrono>
-
 #include "glm/gtc/constants.hpp"
 #include "EngineParameters.hpp"
 #include "profiling/tsc_x86.hpp"
-
+#include "nlohmann/json.hpp"
 #include "omp.h"
 
+#include <algorithm>
+#include <chrono>
 
 namespace Eloy {    
 
@@ -152,8 +151,9 @@ inline glm::vec3 solve_boundary_collision_constraint(glm::vec3 n, glm::vec3 p0, 
     return dp;
 }
 
-void Engine::findNeighbors(NeighborMode mode) {
-    switch (mode) {
+void Engine::findNeighbors() {
+    auto startNeigbors = std::chrono::steady_clock::now();
+    switch (mNeighborMode) {
         case VERLET_BASIC:
             this->findNeighborsUniformGrid();
         break;
@@ -163,22 +163,31 @@ void Engine::findNeighbors(NeighborMode mode) {
         default:
         assert(false);
     }
+    auto endNeigbors = std::chrono::steady_clock::now();
+    mNeighborMs = std::chrono::duration<double, std::milli> (endNeigbors - startNeigbors).count();
 }
 
-void Engine::step(SolverMode solverMode, NeighborMode neighborMode) {
-    switch (solverMode) {
+void Engine::step() {
+
+    auto startAll = std::chrono::steady_clock::now();
+
+    switch (mSolverMode) {
         case BASIC_SINGLE_CORE:
-            this->stepBasisSingleThreaded(neighborMode);
+            this->stepBasisSingleThreaded();
         break;
         case BASIC_MULTI_CORE:
-            this->stepBasisMultiThreaded(neighborMode);
+            this->stepBasisMultiThreaded();
         break;
         default:
         assert(false);
     }
+
+    auto endAll = std::chrono::steady_clock::now();
+    mSolverFullMs = std::chrono::duration<double, std::milli> (endAll - startAll).count();
+    mSolverMs = mSolverFullMs - mNeighborMs;
 }
 
-void Engine::stepBasisMultiThreaded(NeighborMode mode) {
+void Engine::stepBasisMultiThreaded() {
 
     //integration
     #pragma omp parallel for schedule(static)
@@ -189,19 +198,7 @@ void Engine::stepBasisMultiThreaded(NeighborMode mode) {
         CHECK_NAN_VEC(mPositionsStar[i]);
     }
 
-    mNeighborCycles = start_tsc();
-
-    auto startNeigbors = std::chrono::steady_clock::now();
-
-    findNeighbors(mode);
-
-    auto endNeigbors = std::chrono::steady_clock::now();
-    mNeighborMs = std::chrono::duration<double, std::milli> (endNeigbors - startNeigbors).count();
-
-    mNeighborCycles = stop_tsc(mNeighborCycles);
-
-    mSolverCycles = start_tsc();
-    auto startSolver = std::chrono::steady_clock::now();
+    findNeighbors();
 
     for (int s = 0; s < mSubsteps; s++) {
 
@@ -335,12 +332,9 @@ void Engine::stepBasisMultiThreaded(NeighborMode mode) {
         mPositions[i] = mPositionsStar[i];
     }
 
-    auto endSolver = std::chrono::steady_clock::now();
-    mSolverMs = std::chrono::duration<double, std::milli> (endSolver - startSolver).count();
-    mSolverCycles = stop_tsc(mSolverCycles);
 }
 
-void Engine::stepBasisSingleThreaded(NeighborMode mode) {
+void Engine::stepBasisSingleThreaded() {
 
     //integration
     for (int i = 0; i < mNumParticles; i++) {
@@ -351,7 +345,7 @@ void Engine::stepBasisSingleThreaded(NeighborMode mode) {
     }
 
     mNeighborCycles = start_tsc();
-    findNeighbors(mode);
+    findNeighbors();
     mNeighborCycles = stop_tsc(mNeighborCycles);
 
     mSolverCycles = start_tsc();
@@ -663,6 +657,34 @@ const std::vector<glm::vec4>& Engine::getColors() const {
     return mColors;
 }
 
+
+void Engine::writeParticlesToJson(const std::string& filepath) {
+    auto jsonParticlesPositions = nlohmann::json::array();
+
+    for (int i = 0; i < mNumParticles; i++) {
+        auto jsonParticle = nlohmann::json::array();
+        for (int j = 0; j < 3; j++) {
+            jsonParticle.push_back(mPositions[i][j]);
+        }
+        jsonParticlesPositions .push_back(jsonParticle);
+    }
+
+    auto jsonParticlesColors = nlohmann::json::array();
+    for (int i = 0; i < mNumParticles; i++) {
+        auto jsonParticle = nlohmann::json::array();
+        for (int j = 0; j < 4; j++) {
+            jsonParticle.push_back(mColors[i][j]);
+        }
+        jsonParticlesColors.push_back(jsonParticle);
+    }
+    
+    auto jsonParticlesData = nlohmann::json::object();
+    jsonParticlesData["positions"] = jsonParticlesPositions;
+    jsonParticlesData["colors"] = jsonParticlesColors;
+
+    std::ofstream file(filepath);
+    file << jsonParticlesData;
+}
 
 
 }

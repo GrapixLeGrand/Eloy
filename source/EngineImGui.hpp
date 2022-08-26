@@ -12,6 +12,8 @@
 namespace Eloy {
 class EngineImGui {
     Engine& engine;
+    int selectedSolver = 1;
+    int selectedNeighbor = 1;
 public:
     EngineImGui(Engine& engine): engine(engine) {};
     bool imgui() {
@@ -19,15 +21,21 @@ public:
         ImGui::BeginTabBar("Engine");
         if (ImGui::BeginTabItem("Parameters")) {
             
-            double solverCycles = static_cast<double>(engine.mSolverCycles) / static_cast<double>(1.0e6);
-            double neighborsCycles = static_cast<double>(engine.mNeighborCycles) / static_cast<double>(1.0e6);
 
-            ImGui::Text("%d particles %lf MCycles", engine.mNumParticles, solverCycles);
-            ImGui::Text("%d cells %lf MCycles", engine.mNumGridCells, neighborsCycles);
+            ImGui::Text("%d particles %lf ms", engine.mNumParticles, engine.mSolverMs);
+            ImGui::Text("%d cells %lf ms", engine.mNumGridCells, engine.mNeighborMs);
 
-            ImGui::Text("particles %lf ms", engine.mSolverMs);
-            ImGui::Text("cells %lf ms", engine.mNeighborMs);
+            ImGui::Text("simulation (everything) %lf ms (%lf fps)", engine.mSolverFullMs, (1.0 / engine.mSolverFullMs) * 1000.0);
             
+            static const char* solverTypes[]{"single-thread", "multi-threaded"}; 
+            ImGui::Combo("solver", &selectedSolver, solverTypes, IM_ARRAYSIZE(solverTypes));
+            engine.mSolverMode = (Engine::SolverMode) selectedSolver;
+
+            static const char* neighborTypes[]{"basic-verlet", "minimalist"}; 
+            ImGui::Combo("neighbors", &selectedNeighbor, neighborTypes, IM_ARRAYSIZE(neighborTypes));
+            engine.mNeighborMode = (Engine::NeighborMode) selectedNeighbor;
+
+
             ImGui::Text("particle radius %.3f", engine.mParticleRadius);
             ImGui::Text("particle diameter %.3f", engine.mParticleDiameter);
 
@@ -66,6 +74,10 @@ public:
 
             if (ImGui::Button("no gravity")) {
                 engine.mGravity = { 0, 0, 0 };
+            }
+
+            if (ImGui::Button("save state")) {
+                engine.writeParticlesToJson(ELOY_BUILD_DIRECTORY"/save.json");
             }
 
             ImGui::EndTabItem();

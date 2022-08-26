@@ -38,6 +38,7 @@ struct ParticlesPipelineSate {
 		
 		particlesPositionsVBO = new Levek::VertexBuffer(positions);
 		particlesColorsVBO = new Levek::VertexBuffer(colors);
+		this->size = positions.size();
         code = ELOY_ERROR_OK;
 
         if (positions.size() != colors.size()) {

@@ -1,11 +1,13 @@
 #pragma once
 
-#include <vector>
+
 #include "glm/glm.hpp"
 #include "Kernels.hpp"
 #include "AABB.hpp"
 
+#include <vector>
 #include <unordered_set>
+#include <string>
 
 namespace Eloy {
 
@@ -97,11 +99,14 @@ private:
 
     double mSolverMs = 0.0;
     double mNeighborMs = 0.0;
+    double mSolverFullMs = 0.0;
     
-    void stepBasisSingleThreaded(NeighborMode mode);
-    void stepBasisMultiThreaded(NeighborMode mode);
-    
-    void findNeighbors(NeighborMode mode);
+    void stepBasisSingleThreaded();
+    void stepBasisMultiThreaded();
+    void findNeighbors();
+
+    SolverMode mSolverMode = BASIC_SINGLE_CORE;
+    NeighborMode mNeighborMode = VERLET_BASIC;
 public:
 
 
@@ -111,7 +116,7 @@ friend class AABBParticlesData;
 friend class EngineImGui;
 
 Engine(const EngineParameters& parameters);
-void step(SolverMode solverMode = BASIC_SINGLE_CORE, NeighborMode neighborMode = VERLET_BASIC);
+void step();
 
 
 const std::vector<glm::vec3>& getPositions() const;
@@ -123,7 +128,7 @@ float getDiameter() {
 
 //todo
 void getParameters(EngineParameters& out) const;
-
+void writeParticlesToJson(const std::string& filepath);
 
 };
 
