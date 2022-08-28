@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
 
         camera.updateCameraOrientation(inputController, windowController);
         camera.updateCameraTargetWASD(inputController, windowController->getDeltaTime());
-        sceneResult.clear({0, 0, 0, 0});
+        sceneResult.clear(glm::uvec4{0, 0, 0, 0});
         sceneDepthStencil.clear(1.0f);
 
         skybox.draw(&mainFb, renderer, camera.getView(), camera.getProjection());

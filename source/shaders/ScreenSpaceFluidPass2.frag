@@ -2,9 +2,9 @@
 
 //a tutorial https://paroj.github.io/gltut/Illumination/Tutorial%2013.html
 
-layout (location = 0) out vec3 out_color;
-layout (location = 1) out vec3 out_depth;
-layout (location = 2) out vec3 out_normal;
+layout (location = 0) out vec4 out_color;
+layout (location = 1) out vec4 out_depth;
+layout (location = 2) out vec4 out_normal;
 
 uniform mat4 p;
 uniform vec3 light_direction;
@@ -39,9 +39,9 @@ void main()
         float diff = max(dot(normal, light_dir), 0.0);
         //vec3 reflect_dir = reflect(-light_dir, normal);
         //float spec = pow(max(dot(-position, reflect_dir), 0.0), shininess);
-        out_color = vec4(selected_color * vec4(vec3(0.5), 1.0) + diff * selected_color).rgb;
-        out_depth = vec3(depth_ndc);
-        out_normal = normal;
+        out_color = vec4(selected_color * vec4(vec3(0.5), 1.0) + diff * selected_color);
+        out_depth = vec4(vec3(depth_ndc), 1.0);
+        //out_normal = vec4(normal, 1.0);
 
     } else {
         discard;
