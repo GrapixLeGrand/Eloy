@@ -4,6 +4,7 @@
 #include "AABB.hpp"
 #include "ParticlesData.hpp"
 #include "ParticlesRendering.hpp"
+#include "ParticlesRenderingSpf.hpp"
 #include "EngineImGui.hpp"
 
 #include <utility>
