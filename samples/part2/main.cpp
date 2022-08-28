@@ -42,15 +42,20 @@ int main(int argc, char** argv) {
     float imguiScaleFactor = 0.25f;
 
     //definition of buffers for spf rendering
-    Levek::FrameBuffer screenSpaceFb(resolutionX, resolutionY);
+    Levek::FrameBuffer screenSpaceFbPass1(resolutionX, resolutionY);
     Levek::Texture spfColor = Levek::Texture(resolutionX, resolutionY, Levek::TextureParameters::TextureType::RGBA_FLOAT);
     Levek::Texture spfDepthR(resolutionX, resolutionY, Levek::TextureParameters::TextureType::R_FLOAT);
-    Levek::Texture spfNormal(resolutionX, resolutionY, Levek::TextureParameters::TextureType::RGBA_FLOAT);
     Levek::Texture spfDepth(resolutionX, resolutionY, Levek::TextureParameters::TextureType::DEPTH);
-    screenSpaceFb.addColorAttachment(&spfColor, 0);
-    screenSpaceFb.addColorAttachment(&spfNormal, 1);
-    screenSpaceFb.addColorAttachment(&spfDepthR, 2);
-    screenSpaceFb.addAttachment(&spfDepth, Levek::FrameBufferProperties::AttachementType::DEPTH);
+
+    screenSpaceFbPass1.addColorAttachment(&spfColor, 0);
+    screenSpaceFbPass1.addColorAttachment(&spfDepthR, 1);
+    screenSpaceFbPass1.addAttachment(&spfDepth, Levek::FrameBufferProperties::AttachementType::DEPTH);
+    
+    Levek::FrameBuffer screenSpaceFbPass2(resolutionX, resolutionY);
+    Levek::Texture spfOutScene(resolutionX, resolutionY, Levek::TextureParameters::TextureType::RGBA_FLOAT);
+    Levek::Texture spfNormal(resolutionX, resolutionY, Levek::TextureParameters::TextureType::RGBA_FLOAT);
+    screenSpaceFbPass2.addColorAttachment(&spfOutScene, 0);
+    screenSpaceFbPass2.addColorAttachment(&spfNormal, 1);
 
     Eloy::ParticlesRenderingSpf spfParticleRendering(engine, particleSavedState.first, particleSavedState.second, err);
 
@@ -92,7 +97,17 @@ int main(int argc, char** argv) {
             glm::vec3(0, -1, 0),
             0.2f
         );
-        spfParticleRendering.drawPass1(&screenSpaceFb, renderer);
+        spfParticleRendering.drawPass1(&screenSpaceFbPass1, renderer);
+        
+        spfParticleRendering.setUniformsPass2(
+            camera.getProjection(),
+            glm::vec3(0, -1, 0),
+            spfDepthR,
+            sceneResult
+        );
+
+        spfParticleRendering.drawPass2(&screenSpaceFbPass2, renderer);
+
         renderer->draw(&sceneResult, {0.0, 0.0}, {1, 1});
 
         ImGui_ImplOpenGL3_NewFrame();
@@ -107,7 +122,7 @@ int main(int argc, char** argv) {
         ImGui::Image((void*)(intptr_t)spfColor.getId(), ImVec2(static_cast<float>(resolutionX) * imguiScaleFactor, static_cast<float>(resolutionY) * imguiScaleFactor), ImVec2(0, 1), ImVec2(1, 0));
         ImGui::Image((void*)(intptr_t)spfDepthR.getId(), ImVec2(static_cast<float>(resolutionX) * imguiScaleFactor, static_cast<float>(resolutionY) * imguiScaleFactor), ImVec2(0, 1), ImVec2(1, 0));
         ImGui::Image((void*)(intptr_t)spfNormal.getId(), ImVec2(static_cast<float>(resolutionX) * imguiScaleFactor, static_cast<float>(resolutionY) * imguiScaleFactor), ImVec2(0, 1), ImVec2(1, 0));
-        ImGui::Image((void*)(intptr_t)spfDepth.getId(), ImVec2(static_cast<float>(resolutionX) * imguiScaleFactor, static_cast<float>(resolutionY) * imguiScaleFactor), ImVec2(0, 1), ImVec2(1, 0));
+        ImGui::Image((void*)(intptr_t)spfOutScene.getId(), ImVec2(static_cast<float>(resolutionX) * imguiScaleFactor, static_cast<float>(resolutionY) * imguiScaleFactor), ImVec2(0, 1), ImVec2(1, 0));
 
         ImGui::End();
 

@@ -7,6 +7,7 @@ namespace Eloy {
 
 struct ParticlesPipelineSate {
 
+
 	Levek::Model* billboardModel = nullptr;
 	const Levek::Mesh* billboardMesh = nullptr;
 

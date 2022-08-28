@@ -3,8 +3,7 @@
 //a tutorial https://paroj.github.io/gltut/Illumination/Tutorial%2013.html
 
 layout (location = 0) out vec4 out_color;
-layout (location = 1) out vec4 out_normal;
-layout (location = 2) out vec4 out_depth;
+layout (location = 1) out vec4 out_depth;
 
 uniform mat4 p;
 uniform vec3 light_direction;
@@ -44,6 +43,7 @@ void main()
         float l = length(position);
         out_depth.r = l;
         out_depth.a = 1.0;
+        
     } else {
         discard;
     }
