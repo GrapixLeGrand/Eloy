@@ -10,6 +10,12 @@ class ParticlesRenderingSpf : public ParticlesPipelineSate {
         ELOY_SOURCE_DIRECTORY"/shaders/ScreenSpaceFluidPass1.vert",
         ELOY_SOURCE_DIRECTORY"/shaders/ScreenSpaceFluidPass1.frag"
     );
+    
+
+    Levek::Shader spfShaderBlur = Levek::ShaderFactory::makeFromFile(
+        ELOY_SOURCE_DIRECTORY"/shaders/ScreenSpaceFluidBilateralFilter.vert",
+        ELOY_SOURCE_DIRECTORY"/shaders/ScreenSpaceFluidBilateralFilter.frag"
+    );
 
     Levek::Shader spfShaderPass2 = Levek::ShaderFactory::makeFromFile(
         ELOY_SOURCE_DIRECTORY"/shaders/ScreenSpaceFluidPass2.vert",
@@ -27,7 +33,10 @@ ParticlesRenderingSpf(Levek::RenderingEngine* engine, const std::vector<glm::vec
     : ParticlesPipelineSate(engine, positions, colors, code) {
         quadVA.addBuffer(sphereVBO, &sphereLayout);
     };
-
+    
+    void blurDepth(Levek::FrameBuffer* fb, Levek::Renderer* renderer) {
+        renderer->draw(fb, &quadVA, sphereIBO, &spfShaderBlur);
+    }
 
     virtual void drawPass1(Levek::FrameBuffer* fb, Levek::Renderer* renderer) {
 		renderer->drawInstances(fb, particlesVA, sphereIBO, &spfShaderPass1, size);
@@ -55,22 +64,40 @@ ParticlesRenderingSpf(Levek::RenderingEngine* engine, const std::vector<glm::vec
 	}
 
 
+    virtual void setUniformsBlur(
+        const Levek::Texture& depthTexturePass1,
+        glm::vec2 blurDirection,
+        float filterRadius,
+        float blurScale,
+        float blurDepthFallOff
+	) {
+        spfShaderBlur.bind();
+        depthTexturePass1.activateAndBind(0);
+        spfShaderBlur.setUniform1i("uTexDepthPass1", 0);
+        spfShaderBlur.setUniform2f("uBlurDirection", blurDirection);
+        spfShaderBlur.setUniform1f("uFilterRadius", filterRadius);
+        spfShaderBlur.setUniform1f("uBlurScale", blurScale);
+        spfShaderBlur.setUniform1f("uBlurDepthFallOff", blurDepthFallOff);
+	}
+
     virtual void setUniformsPass2(
-		const glm::mat4& p,
+        Levek::CameraBase& camera,
 		const glm::vec3& light_direction,
         const Levek::Texture& depthTexturePass1,
         const Levek::Texture& background
 	) {
+        glm::mat4 p = camera.getProjection();
         glm::mat4 p_inv = glm::inverse(p);
+        glm::vec3 lightDirectionView = glm::normalize(camera.getNormalView() * light_direction);
 		spfShaderPass2.bind();
         depthTexturePass1.activateAndBind(0);
         background.activateAndBind(1);
-        spfShaderPass2.setUniformMat4f("p", p);
-        spfShaderPass2.setUniformMat4f("p_inv", p);
-        spfShaderPass2.setUniform3f("light_direction", light_direction);
+        spfShaderPass2.setUniformMat4f("uMat4P", p);
+        spfShaderPass2.setUniformMat4f("uMat4PInv", p_inv);
+        spfShaderPass2.setUniform3f("uVec3LightDirectionView", lightDirectionView);
 
-        spfShaderPass2.setUniform1i("u_depth_pass1", 0);
-        spfShaderPass2.setUniform1i("u_background", 1);
+        spfShaderPass2.setUniform1i("uTexDepthPass1", 0);
+        spfShaderPass2.setUniform1i("uTexBackground", 1);
         
 	}
 };

@@ -31,7 +31,7 @@ void main()
         vec3 position = normalize(normal) * radius + v2f_position_view;
         vec4 clipPos = p * vec4(position, 1.0);
         float depth_ndc = clipPos.z / clipPos.w; 
-        gl_FragDepth = clipPos.z / clipPos.w; //((gl_DepthRange.diff * depth_ndc) + gl_DepthRange.near + gl_DepthRange.far) / 2.0;
+        gl_FragDepth = (clipPos.z / clipPos.w) * 0.5 + 0.5; //((gl_DepthRange.diff * depth_ndc) + gl_DepthRange.near + gl_DepthRange.far) / 2.0;
     
         vec3 light_dir = light_direction;
 
@@ -41,7 +41,7 @@ void main()
         out_color = vec4(selected_color * vec4(vec3(0.5), 1.0) + diff * selected_color);
         //out_normal = vec4(normal, 1.0);
         float l = length(position);
-        out_depth.r = l;
+        out_depth.r = clipPos.z;
         out_depth.a = 1.0;
         
     } else {
