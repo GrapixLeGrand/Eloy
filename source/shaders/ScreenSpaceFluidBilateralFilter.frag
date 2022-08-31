@@ -12,6 +12,12 @@ uniform float uBlurDepthFallOff;
 void main() {
 
     float depth = texture(uTexDepthPass1, v2fUv).r;
+
+    if (depth < 0.01) { //WARNING this parameter seems to change the look of the fluid
+        discard;
+        return;
+    }
+
     float sum = 0.0;
     float wsum = 0.0;
     //float counter = 0.0;

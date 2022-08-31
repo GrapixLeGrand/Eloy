@@ -7,6 +7,7 @@ layout (location = 1) out vec4 out_normal;
 uniform mat4 uMat4P;
 uniform mat4 uMat4PInv;
 uniform vec3 uVec3LightDirectionView;
+uniform float uShininess;
 
 uniform sampler2D uTexDepthPass1;
 uniform sampler2D uTexBackground;
@@ -29,8 +30,6 @@ void main()
     if (depthEye < 0.01) {
         discard;
         return;
-        //out_normal = vec4(1.0, ); //Warning!
-        //out_scene = vec4(vec3(0.1, 0.7, 0.9) * 0.5, 1.0); // * vec3(0.5) + diff * vec3(0.1, 0.7, 0.9), 1.0);
     }
 
     vec3 posEye = uvToEye(v2fUv, depthEye);
@@ -63,11 +62,17 @@ void main()
     //n = normalize(n);
 
     float diff = max(dot(n, uVec3LightDirectionView), 0.0);
-    //diff = clamp(diff, 0.0, 1.0);
-    out_scene = vec4(vec3(0.1, 0.7, 0.9) * vec3(0.5) + diff * vec3(0.1, 0.7, 0.9), 1.0);
-    //if (length(n) > 1.0) {
-    //    out_scene = vec4(vec3(0.0), 1.0);
-    //}
+    float specular = 0.0;
+    if (diff > 0.0) {
+        vec3 viewDirection = normalize(-posEye);
+        vec3 halfDirection = normalize(uVec3LightDirectionView + viewDirection);
+        float specularAngle = max(dot(halfDirection, n), 0.0);
+        specular = pow(specularAngle, 2.0);
+    }
+
+    vec3 color = vec3(0.1, 0.7, 0.9);
+    out_scene = vec4(color * vec3(0.5) + diff * color + specular * uShininess * color, 1.0);
+
     
     out_normal = vec4(n, 1.0);
     
