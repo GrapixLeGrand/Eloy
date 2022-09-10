@@ -26,6 +26,16 @@ class ParticlesRenderingSpf : public ParticlesPipelineSate {
         ELOY_SOURCE_DIRECTORY"/shaders/ScreenSpaceFluidPass2.frag"
     );
 
+    Levek::Shader spfShaderThickness = Levek::ShaderFactory::makeFromFile(
+        ELOY_SOURCE_DIRECTORY"/shaders/ScreenSpaceFluidThickness.vert",
+        ELOY_SOURCE_DIRECTORY"/shaders/ScreenSpaceFluidThickness.frag"
+    );
+
+    Levek::Shader spfShaderThicknessBlur = Levek::ShaderFactory::makeFromFile(
+        ELOY_SOURCE_DIRECTORY"/shaders/ScreenSpaceFluidGaussianBlur.vert",
+        ELOY_SOURCE_DIRECTORY"/shaders/ScreenSpaceFluidGaussianBlur.frag"
+    );
+
     //pass 1
     Levek::FrameBuffer screenSpaceFbPass1;
     Levek::Texture spfColor;
@@ -46,6 +56,15 @@ class ParticlesRenderingSpf : public ParticlesPipelineSate {
     Levek::Texture spfNormal;
     Levek::Texture spfDepth2;
 
+    //thickness
+    Levek::FrameBuffer screenSpaceFbThickness;
+    Levek::Texture spfThickness1;
+    Levek::Texture spfThickness2;
+    Levek::Texture spfThickness3;
+
+    Levek::FrameBuffer screenSpaceFbThicknessBlurPass1;
+    Levek::FrameBuffer screenSpaceFbThicknessBlurPass2;
+
     Levek::VertexArray quadVA;
     Levek::Renderer* renderer = nullptr;
 
@@ -55,7 +74,18 @@ class ParticlesRenderingSpf : public ParticlesPipelineSate {
 
     float mBlinnPhongShininess = 2.7f;
 
+    float mThicknessFactor = 0.053f;
+    int mThicknessBlurRadius = 5;
+    std::vector<float> mNormalDistribution;
 
+void generateThicknessNormalDistribution() {
+
+    mNormalDistribution.resize(mThicknessBlurRadius);
+    for (int i = 0; i < mThicknessBlurRadius; i++) {
+        mNormalDistribution[i] = (1.0f / glm::sqrt(2.0f * glm::pi<float>())) * static_cast<float>(std::exp(- static_cast<float>(i*i) / 2.0f));
+    }
+
+}
 
 public:
 
@@ -79,6 +109,15 @@ ParticlesRenderingSpf(Levek::RenderingEngine* engine, const std::vector<glm::vec
     spfOutScene(Levek::Texture(engine->getWindowWidth(), engine->getWindowHeight(), Levek::TextureParameters::TextureType::RGBA_FLOAT)),
     spfNormal(Levek::Texture(engine->getWindowWidth(), engine->getWindowHeight(), Levek::TextureParameters::TextureType::RGBA_FLOAT)),
     spfDepth2(Levek::Texture(engine->getWindowWidth(), engine->getWindowHeight(), Levek::TextureParameters::TextureType::DEPTH)),
+    
+    //thickness
+    screenSpaceFbThickness(Levek::FrameBuffer(engine->getWindowWidth(), engine->getWindowHeight())),
+    spfThickness1(Levek::Texture(engine->getWindowWidth(), engine->getWindowHeight(), Levek::TextureParameters::TextureType::R_FLOAT)),
+    spfThickness2(Levek::Texture(engine->getWindowWidth(), engine->getWindowHeight(), Levek::TextureParameters::TextureType::R_FLOAT)),
+    spfThickness3(Levek::Texture(engine->getWindowWidth(), engine->getWindowHeight(), Levek::TextureParameters::TextureType::R_FLOAT)),
+
+    screenSpaceFbThicknessBlurPass1 (Levek::FrameBuffer(engine->getWindowWidth(), engine->getWindowHeight())),
+    screenSpaceFbThicknessBlurPass2 (Levek::FrameBuffer(engine->getWindowWidth(), engine->getWindowHeight())),
 
     renderer(engine->getRenderer()),
     resolutionX(engine->getWindowWidth()),
@@ -105,6 +144,17 @@ ParticlesRenderingSpf(Levek::RenderingEngine* engine, const std::vector<glm::vec
         screenSpaceFbPass2.addColorAttachment(&spfNormal, 1);
         screenSpaceFbPass2.addAttachment(&spfDepth2, Levek::FrameBufferProperties::AttachementType::DEPTH);
 
+        //thickness
+        screenSpaceFbThickness.addColorAttachment(&spfThickness1, 0);
+        screenSpaceFbThickness.addAttachment(&spfDummyDepth, Levek::FrameBufferProperties::AttachementType::DEPTH);
+
+        screenSpaceFbThicknessBlurPass1.addColorAttachment(&spfThickness2, 0);
+        screenSpaceFbThicknessBlurPass1.addAttachment(&spfDummyDepth, Levek::FrameBufferProperties::AttachementType::DEPTH);
+
+        screenSpaceFbThicknessBlurPass2.addColorAttachment(&spfThickness3, 0);
+        screenSpaceFbThicknessBlurPass2.addAttachment(&spfDummyDepth, Levek::FrameBufferProperties::AttachementType::DEPTH);
+
+        generateThicknessNormalDistribution();
     };
     
 
@@ -133,6 +183,56 @@ ParticlesRenderingSpf(Levek::RenderingEngine* engine, const std::vector<glm::vec
         spfShaderPass1.setUniform1f("scale", particle_scale);
 
         renderer->drawInstances(&screenSpaceFbPass1, particlesVA, sphereIBO, &spfShaderPass1, size);
+
+        //pass thickness
+
+        spfDummyDepth.clear(1.0f);
+        //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        //glDisable(GL_DEPTH_TEST);
+        glEnable(GL_BLEND);
+	    glBlendFunc(GL_ONE, GL_ONE);
+	    glBlendEquation(GL_FUNC_ADD);
+	    glDepthMask(GL_FALSE);
+
+        screenSpaceFbThickness.clear();
+        //spfThickness.clear(0.0f);
+
+        spfShaderThickness.bind();
+        spfShaderThickness.setUniformMat4f("vp", camera.getViewProjection());
+        spfShaderThickness.setUniformMat3f("view_inv", camera.getViewInv());
+        spfShaderThickness.setUniform1f("scale", particle_scale);
+        spfShaderThickness.setUniform1f("factor", mThicknessFactor);
+
+        renderer->drawInstances(&screenSpaceFbThickness, particlesVA, sphereIBO, &spfShaderThickness, size);
+
+        glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        //gaussian blur thickness
+        spfDummyDepth.clear(1.0f);
+        screenSpaceFbThicknessBlurPass1.clear();
+
+        spfShaderThicknessBlur.bind();
+        spfThickness1.activateAndBind(0);
+        spfShaderThicknessBlur.setUniform1i("in_tex", 0);
+        spfShaderThicknessBlur.setUniform1i("radius", mThicknessBlurRadius);
+        spfShaderThicknessBlur.setUniform1f("weights", mNormalDistribution.data(), mNormalDistribution.size());
+        spfShaderThicknessBlur.setUniform2f("direction", glm::vec2{1.0f / spfThickness1.getWidth(), 0.f});
+
+        renderer->draw(&screenSpaceFbThicknessBlurPass1, &quadVA, sphereIBO, &spfShaderThicknessBlur); 
+
+        spfDummyDepth.clear(1.0f);
+        screenSpaceFbThicknessBlurPass2.clear();
+
+        //spfShaderThicknessBlur.bind();
+        spfThickness2.activateAndBind(0);
+        spfShaderThicknessBlur.setUniform1i("in_tex", 0);
+        spfShaderThicknessBlur.setUniform1i("radius", mThicknessBlurRadius);
+        spfShaderThicknessBlur.setUniform1f("weights", mNormalDistribution.data(), mNormalDistribution.size());
+        spfShaderThicknessBlur.setUniform2f("direction", glm::vec2{0.0f, 1.0f / spfThickness2.getHeight()});
+
+        renderer->draw(&screenSpaceFbThicknessBlurPass2, &quadVA, sphereIBO, &spfShaderThicknessBlur); 
 
         //pass blur
 
@@ -190,6 +290,8 @@ ParticlesRenderingSpf(Levek::RenderingEngine* engine, const std::vector<glm::vec
         ImGui::SliderFloat("blurScale", &blurScale, 0.00001f, 100.0f);
         ImGui::SliderFloat("blurDepthFallOff", &blurDepthFallOff, 0.001f, 1000.0f);
         ImGui::SliderFloat("shininess", &mBlinnPhongShininess, 0, 40);
+
+        
         /*
         ImGui::Image((void*)(intptr_t)spfColor.getId(), ImVec2(static_cast<float>(resolutionX) * scale, static_cast<float>(resolutionY) * scale), ImVec2(0, 1), ImVec2(1, 0));
         
@@ -210,7 +312,18 @@ ParticlesRenderingSpf(Levek::RenderingEngine* engine, const std::vector<glm::vec
         //ImGui::Image((void*)(intptr_t)spfNormal.getId(), ImVec2(static_cast<float>(resolutionX) * scale, static_cast<float>(resolutionY) * scale), ImVec2(0, 1), ImVec2(1, 0));
         
         ImGui::Image((void*)(intptr_t)spfOutScene.getId(), ImVec2(static_cast<float>(resolutionX) * scale, static_cast<float>(resolutionY) * scale), ImVec2(0, 1), ImVec2(1, 0));
-
+        
+        ImGui::SliderFloat("ThicknessFactor", &mThicknessFactor, 0.0f, 1.0f);
+        
+        float saveRadius = mThicknessBlurRadius;
+        ImGui::SliderInt("thickness blur radius", &mThicknessBlurRadius, 0, 32);
+        if (saveRadius != mThicknessBlurRadius) {
+            generateThicknessNormalDistribution();
+        }
+        
+        ImGui::Image((void*)(intptr_t)spfThickness1.getId(), ImVec2(static_cast<float>(resolutionX) * scale, static_cast<float>(resolutionY) * scale), ImVec2(0, 1), ImVec2(1, 0));
+        ImGui::Image((void*)(intptr_t)spfThickness3.getId(), ImVec2(static_cast<float>(resolutionX) * scale, static_cast<float>(resolutionY) * scale), ImVec2(0, 1), ImVec2(1, 0));
+    
     }
 
 /*

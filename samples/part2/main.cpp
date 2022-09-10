@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
         skybox.draw(&mainFb, renderer, camera.getView(), camera.getProjection());
         ground.draw(&mainFb, renderer, camera.getViewProjection());
         
-        particleRendering.setUniforms(
+        /*particleRendering.setUniforms(
             camera.getViewProjection(),
             camera.getProjection(),
             camera.getView(),
@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
             0.2f
         );
         particleRendering.draw(&mainFb, renderer);
-
+        */
         spfParticleRendering.draw(
             sceneResult,
             camera,
@@ -87,6 +87,7 @@ int main(int argc, char** argv) {
         fps += " fps";
         ImGui::Text(fps.c_str());
 
+        ImGui::Image((void*)(intptr_t)sceneResult.getId(), ImVec2(static_cast<float>(resolutionX) * imguiScaleFactor, static_cast<float>(resolutionY) * imguiScaleFactor), ImVec2(0, 1), ImVec2(1, 0));
         spfParticleRendering.imGui(imguiScaleFactor);
 
         ImGui::End();
