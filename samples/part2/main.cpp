@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
             0.2f
         );
 
-        renderer->draw(&sceneResult, {0.0, 0.0}, {1, 1});
+        renderer->draw(spfParticleRendering.getScene(), {0.0, 0.0}, {1, 1});
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();

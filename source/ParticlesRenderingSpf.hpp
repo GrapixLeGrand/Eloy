@@ -68,11 +68,14 @@ class ParticlesRenderingSpf : public ParticlesPipelineSate {
     Levek::VertexArray quadVA;
     Levek::Renderer* renderer = nullptr;
 
+    glm::vec3 mFluidColor = glm::vec3(0.1, 0.7, 0.9);
+    glm::vec3 mBackGroundFactor = glm::vec3(1, 1, 1);
+
     float filterRadius = 8.0f;
     float blurScale = 0.001f;
     float blurDepthFallOff = 0.001f;
 
-    float mBlinnPhongShininess = 2.7f;
+    float mBlinnPhongShininess = 11.7f;
 
     float mThicknessFactor = 0.053f;
     int mThicknessBlurRadius = 5;
@@ -83,7 +86,7 @@ class ParticlesRenderingSpf : public ParticlesPipelineSate {
     float mDeformationFactor = 0.046f;
 
     float mDiffuseFactor = 0.2f;
-    float mSpecularFactor = 1.0f;
+    float mSpecularFactor = 0.35f;
 
 void generateThicknessNormalDistribution() {
 
@@ -164,6 +167,10 @@ ParticlesRenderingSpf(Levek::RenderingEngine* engine, const std::vector<glm::vec
         generateThicknessNormalDistribution();
     };
     
+
+    const Levek::Texture* getScene() {
+        return &spfOutScene;
+    }
 
     virtual void draw(
         Levek::Texture& backgroundScene,
@@ -286,6 +293,8 @@ ParticlesRenderingSpf(Levek::RenderingEngine* engine, const std::vector<glm::vec
         spfShaderPass2.setUniform1f("uDeformationFactor", mDeformationFactor);
         spfShaderPass2.setUniform1f("uDiffuseFactor", mDiffuseFactor);
         spfShaderPass2.setUniform1f("uSpecularFactor", mSpecularFactor);
+        spfShaderPass2.setUniform3f("uBackgroundFactor", mBackGroundFactor);
+        spfShaderPass2.setUniform3f("uFluidColor", mFluidColor);
 
         spfShaderPass2.setUniform1i("uTexDepthPass1", 0);
         spfShaderPass2.setUniform1i("uTexBackground", 1);
@@ -302,6 +311,9 @@ ParticlesRenderingSpf(Levek::RenderingEngine* engine, const std::vector<glm::vec
         ImGui::Text("Fluid");
         ImGui::Text("Color");
 
+        ImGui::ColorEdit3("fluid color", &mFluidColor[0]);
+        ImGui::ColorEdit3("background factor", &mBackGroundFactor[0]);
+
         ImGui::SliderFloat("blurRadius", &filterRadius, 1, 50);
         ImGui::SliderFloat("blurScale", &blurScale, 0.00001f, 100.0f);
         ImGui::SliderFloat("blurDepthFallOff", &blurDepthFallOff, 0.001f, 1000.0f);
@@ -315,7 +327,7 @@ ParticlesRenderingSpf(Levek::RenderingEngine* engine, const std::vector<glm::vec
         ImGui::SliderFloat("Diffuse factor", &mDiffuseFactor, 0.0f, 1.0f);
         ImGui::SliderFloat("Specular factor", &mSpecularFactor, 0.0f, 1.0f);
 
-        ImGui::Image((void*)(intptr_t)spfOutScene.getId(), ImVec2(static_cast<float>(resolutionX) * scale, static_cast<float>(resolutionY) * scale), ImVec2(0, 1), ImVec2(1, 0));
+        //ImGui::Image((void*)(intptr_t)spfOutScene.getId(), ImVec2(static_cast<float>(resolutionX) * scale, static_cast<float>(resolutionY) * scale), ImVec2(0, 1), ImVec2(1, 0));
         
         ImGui::SliderFloat("ThicknessFactor", &mThicknessFactor, 0.0f, 1.0f);
         
@@ -326,8 +338,7 @@ ParticlesRenderingSpf(Levek::RenderingEngine* engine, const std::vector<glm::vec
         }
         
         ImGui::SliderFloat("ThicknessBlurOffset", &mThicknessBlurOffset, 0.0f, 10.0f);
-        //ImGui::Image((void*)(intptr_t)spfThickness1.getId(), ImVec2(static_cast<float>(resolutionX) * scale, static_cast<float>(resolutionY) * scale), ImVec2(0, 1), ImVec2(1, 0));
-        //ImGui::Image((void*)(intptr_t)spfThickness3.getId(), ImVec2(static_cast<float>(resolutionX) * scale, static_cast<float>(resolutionY) * scale), ImVec2(0, 1), ImVec2(1, 0));
+        
     
     }
 

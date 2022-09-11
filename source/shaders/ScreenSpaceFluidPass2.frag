@@ -13,6 +13,8 @@ uniform float uDeformationFactor;
 
 uniform float uDiffuseFactor;
 uniform float uSpecularFactor;
+uniform vec3 uFluidColor;
+uniform vec3 uBackgroundFactor;
 
 uniform sampler2D uTexDepthPass1;
 uniform sampler2D uTexBackground;
@@ -34,7 +36,9 @@ void main()
 
     float depthEye = texture(uTexDepthPass1, v2fUv).r;
     if (depthEye < 0.01) {
-        discard;
+        vec3 background = texture(uTexBackground, v2fUv).rgb;
+        out_scene = vec4(background, 1.0);
+        //discard;
         return;
     }
 
@@ -76,15 +80,16 @@ void main()
         specular = pow(specularAngle, uShininess);
     }
 
-    vec3 color = vec3(0.1, 0.7, 0.9);
+    vec3 color = uFluidColor; //vec3(0.1, 0.7, 0.9);
 
     float thickness = texture(uTexThickness, v2fUv).r;
     float volumetricAbsorption = exp(-uVolumetricAbsorption * thickness);
 
     vec3 background = texture(uTexBackground, v2fUv + thickness * uDeformationFactor * n.xy).rgb;
+    background *= uBackgroundFactor;
     vec3 fluid_color = mix(color, background, volumetricAbsorption);
     
     out_scene = vec4(fluid_color + (diff * uDiffuseFactor + specular * uSpecularFactor) * fluid_color, 1.0); //vec4(color * vec3(0.5) + diff * color + specular * uShininess * color, 1.0);
     out_normal = vec4(n, 1.0);
-    
+    //gl_FragDepth = depthEye;
 }
