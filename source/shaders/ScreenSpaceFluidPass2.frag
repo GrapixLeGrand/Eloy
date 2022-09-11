@@ -8,9 +8,15 @@ uniform mat4 uMat4P;
 uniform mat4 uMat4PInv;
 uniform vec3 uVec3LightDirectionView;
 uniform float uShininess;
+uniform float uVolumetricAbsorption;
+uniform float uDeformationFactor;
+
+uniform float uDiffuseFactor;
+uniform float uSpecularFactor;
 
 uniform sampler2D uTexDepthPass1;
 uniform sampler2D uTexBackground;
+uniform sampler2D uTexThickness;
 
 in vec2 v2fUv;
 
@@ -67,13 +73,18 @@ void main()
         vec3 viewDirection = normalize(-posEye);
         vec3 halfDirection = normalize(uVec3LightDirectionView + viewDirection);
         float specularAngle = max(dot(halfDirection, n), 0.0);
-        specular = pow(specularAngle, 2.0);
+        specular = pow(specularAngle, uShininess);
     }
 
     vec3 color = vec3(0.1, 0.7, 0.9);
-    out_scene = vec4(color * vec3(0.5) + diff * color + specular * uShininess * color, 1.0);
 
+    float thickness = texture(uTexThickness, v2fUv).r;
+    float volumetricAbsorption = exp(-uVolumetricAbsorption * thickness);
+
+    vec3 background = texture(uTexBackground, v2fUv + thickness * uDeformationFactor * n.xy).rgb;
+    vec3 fluid_color = mix(color, background, volumetricAbsorption);
     
+    out_scene = vec4(fluid_color + (diff * uDiffuseFactor + specular * uSpecularFactor) * fluid_color, 1.0); //vec4(color * vec3(0.5) + diff * color + specular * uShininess * color, 1.0);
     out_normal = vec4(n, 1.0);
     
 }

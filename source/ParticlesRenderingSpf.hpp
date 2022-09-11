@@ -77,6 +77,13 @@ class ParticlesRenderingSpf : public ParticlesPipelineSate {
     float mThicknessFactor = 0.053f;
     int mThicknessBlurRadius = 5;
     std::vector<float> mNormalDistribution;
+    float mThicknessBlurOffset = 4.0f;
+
+    float mVolumetricAbsorption = 1.0f;
+    float mDeformationFactor = 0.046f;
+
+    float mDiffuseFactor = 0.2f;
+    float mSpecularFactor = 1.0f;
 
 void generateThicknessNormalDistribution() {
 
@@ -219,6 +226,7 @@ ParticlesRenderingSpf(Levek::RenderingEngine* engine, const std::vector<glm::vec
         spfShaderThicknessBlur.setUniform1i("radius", mThicknessBlurRadius);
         spfShaderThicknessBlur.setUniform1f("weights", mNormalDistribution.data(), mNormalDistribution.size());
         spfShaderThicknessBlur.setUniform2f("direction", glm::vec2{1.0f / spfThickness1.getWidth(), 0.f});
+        spfShaderThicknessBlur.setUniform1f("offset", mThicknessBlurOffset);
 
         renderer->draw(&screenSpaceFbThicknessBlurPass1, &quadVA, sphereIBO, &spfShaderThicknessBlur); 
 
@@ -231,6 +239,7 @@ ParticlesRenderingSpf(Levek::RenderingEngine* engine, const std::vector<glm::vec
         spfShaderThicknessBlur.setUniform1i("radius", mThicknessBlurRadius);
         spfShaderThicknessBlur.setUniform1f("weights", mNormalDistribution.data(), mNormalDistribution.size());
         spfShaderThicknessBlur.setUniform2f("direction", glm::vec2{0.0f, 1.0f / spfThickness2.getHeight()});
+        spfShaderThicknessBlur.setUniform1f("offset", mThicknessBlurOffset);
 
         renderer->draw(&screenSpaceFbThicknessBlurPass2, &quadVA, sphereIBO, &spfShaderThicknessBlur); 
 
@@ -267,15 +276,22 @@ ParticlesRenderingSpf(Levek::RenderingEngine* engine, const std::vector<glm::vec
         spfShaderPass2.bind();
         spfBlurHorizontal.activateAndBind(0);
         backgroundScene.activateAndBind(1);
+        spfThickness2.activateAndBind(2);
         spfShaderPass2.setUniformMat4f("uMat4P", camera.getProjection());
         glm::mat4 pInv = glm::inverse(camera.getProjection());
         spfShaderPass2.setUniformMat4f("uMat4PInv", pInv);
         glm::vec3 lightDirectionView = glm::normalize(camera.getNormalView() * light_direction);
         spfShaderPass2.setUniform3f("uVec3LightDirectionView", lightDirectionView);
+        spfShaderPass2.setUniform1f("uVolumetricAbsorption", mVolumetricAbsorption);
+        spfShaderPass2.setUniform1f("uDeformationFactor", mDeformationFactor);
+        spfShaderPass2.setUniform1f("uDiffuseFactor", mDiffuseFactor);
+        spfShaderPass2.setUniform1f("uSpecularFactor", mSpecularFactor);
 
         spfShaderPass2.setUniform1i("uTexDepthPass1", 0);
         spfShaderPass2.setUniform1i("uTexBackground", 1);
+        spfShaderPass2.setUniform1i("uTexThickness", 2);
         spfShaderPass2.setUniform1f("uShininess", mBlinnPhongShininess);
+
 
         renderer->draw(&screenSpaceFbPass2, &quadVA, sphereIBO, &spfShaderPass2);
 
@@ -291,26 +307,14 @@ ParticlesRenderingSpf(Levek::RenderingEngine* engine, const std::vector<glm::vec
         ImGui::SliderFloat("blurDepthFallOff", &blurDepthFallOff, 0.001f, 1000.0f);
         ImGui::SliderFloat("shininess", &mBlinnPhongShininess, 0, 40);
 
-        
-        /*
-        ImGui::Image((void*)(intptr_t)spfColor.getId(), ImVec2(static_cast<float>(resolutionX) * scale, static_cast<float>(resolutionY) * scale), ImVec2(0, 1), ImVec2(1, 0));
-        
-
-        ImGui::Text("depth view");
-        ImGui::Image((void*)(intptr_t)spfDepthPass1.getId(), ImVec2(static_cast<float>(resolutionX) * scale, static_cast<float>(resolutionY) * scale), ImVec2(0, 1), ImVec2(1, 0));
-
-        ImGui::Text("depth view V");
-        ImGui::Image((void*)(intptr_t)spfBlurVertical.getId(), ImVec2(static_cast<float>(resolutionX) * scale, static_cast<float>(resolutionY) * scale), ImVec2(0, 1), ImVec2(1, 0));
-
-        
-
-        ImGui::Text("depth view H");
-        ImGui::Image((void*)(intptr_t)spfBlurHorizontal.getId(), ImVec2(static_cast<float>(resolutionX) * scale, static_cast<float>(resolutionY) * scale), ImVec2(0, 1), ImVec2(1, 0));
-        //ImGui::Text("blurred depth view");
-        */
+    
         ImGui::Text("Normal (from depth)");
-        //ImGui::Image((void*)(intptr_t)spfNormal.getId(), ImVec2(static_cast<float>(resolutionX) * scale, static_cast<float>(resolutionY) * scale), ImVec2(0, 1), ImVec2(1, 0));
-        
+        ImGui::SliderFloat("Volumetric absorption", &mVolumetricAbsorption, 0.0f, 10.0f);
+        ImGui::SliderFloat("Deformation factor", &mDeformationFactor, 0.0f, 1.0f);
+
+        ImGui::SliderFloat("Diffuse factor", &mDiffuseFactor, 0.0f, 1.0f);
+        ImGui::SliderFloat("Specular factor", &mSpecularFactor, 0.0f, 1.0f);
+
         ImGui::Image((void*)(intptr_t)spfOutScene.getId(), ImVec2(static_cast<float>(resolutionX) * scale, static_cast<float>(resolutionY) * scale), ImVec2(0, 1), ImVec2(1, 0));
         
         ImGui::SliderFloat("ThicknessFactor", &mThicknessFactor, 0.0f, 1.0f);
@@ -321,79 +325,13 @@ ParticlesRenderingSpf(Levek::RenderingEngine* engine, const std::vector<glm::vec
             generateThicknessNormalDistribution();
         }
         
-        ImGui::Image((void*)(intptr_t)spfThickness1.getId(), ImVec2(static_cast<float>(resolutionX) * scale, static_cast<float>(resolutionY) * scale), ImVec2(0, 1), ImVec2(1, 0));
-        ImGui::Image((void*)(intptr_t)spfThickness3.getId(), ImVec2(static_cast<float>(resolutionX) * scale, static_cast<float>(resolutionY) * scale), ImVec2(0, 1), ImVec2(1, 0));
+        ImGui::SliderFloat("ThicknessBlurOffset", &mThicknessBlurOffset, 0.0f, 10.0f);
+        //ImGui::Image((void*)(intptr_t)spfThickness1.getId(), ImVec2(static_cast<float>(resolutionX) * scale, static_cast<float>(resolutionY) * scale), ImVec2(0, 1), ImVec2(1, 0));
+        //ImGui::Image((void*)(intptr_t)spfThickness3.getId(), ImVec2(static_cast<float>(resolutionX) * scale, static_cast<float>(resolutionY) * scale), ImVec2(0, 1), ImVec2(1, 0));
     
     }
 
-/*
-    void blurDepth(Levek::FrameBuffer* fb, Levek::Renderer* renderer) {
-        renderer->draw(fb, &quadVA, sphereIBO, &spfShaderBlur);
-    }
 
-    virtual void drawPass1(Levek::FrameBuffer* fb, Levek::Renderer* renderer) {
-		renderer->drawInstances(fb, particlesVA, sphereIBO, &spfShaderPass1, size);
-	}
-
-    virtual void drawPass2(Levek::FrameBuffer* fb, Levek::Renderer* renderer) {
-		renderer->draw(fb, &quadVA, sphereIBO, &spfShaderPass2);
-	}
-
-	virtual void setUniformsPass1(
-		const glm::mat4& vp,
-		const glm::mat4& p,
-		const glm::mat4& v,
-		const glm::mat4& v_inv,
-		const glm::vec3& light_direction,
-		float particle_scale 
-	) {
-		spfShaderPass1.bind();
-        spfShaderPass1.setUniformMat4f("vp", vp);
-        spfShaderPass1.setUniformMat4f("p", p);
-        spfShaderPass1.setUniformMat4f("view", v);
-        spfShaderPass1.setUniformMat3f("view_inv", v_inv);
-        spfShaderPass1.setUniform3f("light_direction", light_direction);
-        spfShaderPass1.setUniform1f("scale", particle_scale);
-	}
-
-
-    virtual void setUniformsBlur(
-        const Levek::Texture& depthTexturePass1,
-        glm::vec2 blurDirection,
-        float filterRadius,
-        float blurScale,
-        float blurDepthFallOff
-	) {
-        spfShaderBlur.bind();
-        depthTexturePass1.activateAndBind(0);
-        spfShaderBlur.setUniform1i("uTexDepthPass1", 0);
-        spfShaderBlur.setUniform2f("uBlurDirection", blurDirection);
-        spfShaderBlur.setUniform1f("uFilterRadius", filterRadius);
-        spfShaderBlur.setUniform1f("uBlurScale", blurScale);
-        spfShaderBlur.setUniform1f("uBlurDepthFallOff", blurDepthFallOff);
-	}
-
-    virtual void setUniformsPass2(
-        Levek::CameraBase& camera,
-		const glm::vec3& light_direction,
-        const Levek::Texture& depthTexturePass1,
-        const Levek::Texture& background
-	) {
-        glm::mat4 p = camera.getProjection();
-        glm::mat4 p_inv = glm::inverse(p);
-        glm::vec3 lightDirectionView = glm::normalize(camera.getNormalView() * light_direction);
-		spfShaderPass2.bind();
-        depthTexturePass1.activateAndBind(0);
-        background.activateAndBind(1);
-        spfShaderPass2.setUniformMat4f("uMat4P", p);
-        spfShaderPass2.setUniformMat4f("uMat4PInv", p_inv);
-        spfShaderPass2.setUniform3f("uVec3LightDirectionView", lightDirectionView);
-
-        spfShaderPass2.setUniform1i("uTexDepthPass1", 0);
-        spfShaderPass2.setUniform1i("uTexBackground", 1);
-        
-	}
-    */
 };
 
 }
