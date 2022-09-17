@@ -27,9 +27,9 @@ public:
 
 
 //worked well with the sim with the pressure uncorrected
-class EngineParameters {
+class PBDSolverParameters {
 public:
-    int mX = 12, mY = 30, mZ = 12;
+    int mX = 6, mY = 15, mZ = 6;
     float mParticuleRadius          = static_cast<float>(0.1);
     float mKernelRadius             = static_cast<float>(0.32);
     float mKernelFactor             = static_cast<float>(1);

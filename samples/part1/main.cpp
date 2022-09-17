@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
     Levek::SkyBoxPipelineState skybox;
     Levek::GroundPipelineState ground(modelLoader, 150.0f, false);
 
-    Eloy::EngineParameters parameters;
+    Eloy::PBDSolverParameters parameters;
     //parameters.mParticuleRadius = 0.25f;
     glm::vec3 min_pos = {0.5, 0.5, 0.5};
     glm::vec3 max_pos = {5, 10, 5};
@@ -35,11 +35,11 @@ int main(int argc, char** argv) {
 
     parameters.mParticlesData.push_back(&aabb1);
 
-    Eloy::Engine particleEngine(parameters);
+    Eloy::PBDVerletSolver particleEngine(parameters);
     
     Eloy::ErrorCode err = Eloy::ELOY_ERROR_OK;
     Eloy::ParticlesPipelineSate particleRendering(engine, particleEngine.getPositions(), particleEngine.getColors(), err);
-    Eloy::EngineImGui engineImGui(particleEngine);
+    Eloy::PBDVerletSolverImGui engineImGui(particleEngine);
 
     Levek::FrameBuffer mainFb(resolutionX, resolutionY);
     Levek::Texture sceneResult(resolutionX, resolutionY, Levek::TextureParameters::TextureType::RGB);
@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
 
         if (engineImGui.imgui()) {
             particleEngine.getParameters(parameters);
-            particleEngine = Eloy::Engine(parameters);
+            particleEngine = Eloy::PBDVerletSolver(parameters);
             //engineImGui = Eloy::EngineImGui(particleEngine);
         }
 

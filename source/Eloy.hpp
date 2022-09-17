@@ -1,11 +1,12 @@
 
-#include "Engine.hpp"
-#include "EngineParameters.hpp"
+#include "PBDVerletSolver.hpp"
+#include "PBDPackedSolver.hpp"
+#include "PBDSolverParameters.hpp"
 #include "AABB.hpp"
 #include "ParticlesData.hpp"
 #include "ParticlesRendering.hpp"
 #include "ParticlesRenderingSpf.hpp"
-#include "EngineImGui.hpp"
+#include "PBDVerletSolverImGui.hpp"
 
 #include <utility>
 

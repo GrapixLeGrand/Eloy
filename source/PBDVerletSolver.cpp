@@ -1,7 +1,7 @@
 #include "Eloy.hpp"
 
 #include "glm/gtc/constants.hpp"
-#include "EngineParameters.hpp"
+#include "PBDSolverParameters.hpp"
 #include "profiling/tsc_x86.hpp"
 #include "nlohmann/json.hpp"
 #include "omp.h"
@@ -11,7 +11,7 @@
 
 namespace Eloy {    
 
-Engine::Engine(const EngineParameters& parameters) {
+PBDVerletSolver::PBDVerletSolver(const PBDSolverParameters& parameters) {
 
     mX = parameters.mX;
     mY = parameters.mY;
@@ -54,7 +54,7 @@ Engine::Engine(const EngineParameters& parameters) {
     mParallelViscosities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
 
     mNeighbors = std::vector<std::vector<int>>(mNumParticles, std::vector<int>{});
-    mCellSize = mKernelRadius;
+    mCellSize = mKernelRadius * 0.5f;
 
     mGridX = static_cast<float>(mX / mCellSize) + 1;
     mGridY = static_cast<float>(mY / mCellSize) + 1;
@@ -112,7 +112,7 @@ Engine::Engine(const EngineParameters& parameters) {
     assert(!glm::isinf(V) && "the value is inf");
 
 
-inline float Engine::s_coor(float rl) {
+inline float PBDVerletSolver::s_coor(float rl) {
     float result = static_cast<float>(0);
     float W = mCubicKernel.W(mSCorrDeltaQ);
     if (W > 0.001f) { //glm::epsilon<float>()
@@ -122,7 +122,7 @@ inline float Engine::s_coor(float rl) {
     return result;
 }
 
-inline float Engine::resolve_collision(float value, float min, float max) {
+inline float PBDVerletSolver::resolve_collision(float value, float min, float max) {
 
     if (value <= min) {
         return mEpsilonCollision;
@@ -151,7 +151,7 @@ inline glm::vec3 solve_boundary_collision_constraint(glm::vec3 n, glm::vec3 p0, 
     return dp;
 }
 
-void Engine::findNeighbors() {
+void PBDVerletSolver::findNeighbors() {
     auto startNeigbors = std::chrono::steady_clock::now();
     switch (mNeighborMode) {
         case VERLET_BASIC:
@@ -167,7 +167,7 @@ void Engine::findNeighbors() {
     mNeighborMs = std::chrono::duration<double, std::milli> (endNeigbors - startNeigbors).count();
 }
 
-void Engine::step() {
+void PBDVerletSolver::step() {
 
     auto startAll = std::chrono::steady_clock::now();
 
@@ -187,7 +187,7 @@ void Engine::step() {
     mSolverMs = mSolverFullMs - mNeighborMs;
 }
 
-void Engine::stepBasisMultiThreaded() {
+void PBDVerletSolver::stepBasisMultiThreaded() {
 
     //integration
     #pragma omp parallel for schedule(static)
@@ -334,7 +334,7 @@ void Engine::stepBasisMultiThreaded() {
 
 }
 
-void Engine::stepBasisSingleThreaded() {
+void PBDVerletSolver::stepBasisSingleThreaded() {
 
     //integration
     for (int i = 0; i < mNumParticles; i++) {
@@ -474,13 +474,13 @@ void Engine::stepBasisSingleThreaded() {
     
 }
 
-void Engine::resize(size_t newSize) {
+void PBDVerletSolver::resize(size_t newSize) {
     mPositions.resize(newSize);
     mVelocities.resize(newSize);
     mColors.resize(newSize);
 }
 
-inline int Engine::get_cell_id(glm::vec3 position) {
+inline int PBDVerletSolver::get_cell_id(glm::vec3 position) {
     //position = glm::clamp(position, glm::vec3(simulation->mCellSize * 0.5f), glm::vec3(simulation->domainX - simulation->mCellSize * 0.5f, simulation->domainY - simulation->mCellSize * 0.5f, simulation->domainZ - simulation->mCellSize * 0.5f));
     CHECK_NAN_VEC(position);
     position /= mCellSize;
@@ -492,11 +492,11 @@ inline int Engine::get_cell_id(glm::vec3 position) {
     return cell_id;
 }
 
-inline bool Engine::check_index(int i, int min, int max) {
+inline bool PBDVerletSolver::check_index(int i, int min, int max) {
     return (i >= min && i < max);
 }
 
-void Engine::findNeighborsUniformGrid() {
+void PBDVerletSolver::findNeighborsUniformGrid() {
 
     for (int i = 0; i < mNumParticles; i++) {
         mNeighbors[i].clear();
@@ -580,7 +580,7 @@ void Engine::findNeighborsUniformGrid() {
 }
 
 
-void Engine::findNeighborsUniformGridMinimalStrategy() {
+void PBDVerletSolver::findNeighborsUniformGridMinimalStrategy() {
 
     mCellsUsedSet.clear();
     mCellsUsedStorage.clear();
@@ -626,7 +626,7 @@ void Engine::findNeighborsUniformGridMinimalStrategy() {
     }
 }
 
-void Engine::getParameters(EngineParameters& out) const {
+void PBDVerletSolver::getParameters(PBDSolverParameters& out) const {
 
     out.mParticuleRadius = mParticleRadius;
     out.mCXsph = mCXsph;
@@ -649,16 +649,16 @@ void Engine::getParameters(EngineParameters& out) const {
     out.mKernelRadius = mKernelRadius;
 }
 
-const std::vector<glm::vec3>& Engine::getPositions() const {
+const std::vector<glm::vec3>& PBDVerletSolver::getPositions() const {
     return mPositions;
 }
 
-const std::vector<glm::vec4>& Engine::getColors() const {
+const std::vector<glm::vec4>& PBDVerletSolver::getColors() const {
     return mColors;
 }
 
 
-void Engine::writeParticlesToJson(const std::string& filepath) {
+void PBDVerletSolver::writeParticlesToJson(const std::string& filepath) {
     auto jsonParticlesPositions = nlohmann::json::array();
 
     for (int i = 0; i < mNumParticles; i++) {

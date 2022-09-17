@@ -21,7 +21,8 @@ link_directories(${Eloy_SOURCE_DIR}/source)
 
 set(ELOY_SOURCES
     "source/Eloy.cpp"
-    "source/Engine.cpp"
+    "source/PBDVerletSolver.cpp"
+    "source/PBDPackedSolver.cpp"
     "source/profiling/tsc_x86.cpp"
 )
 

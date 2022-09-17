@@ -11,9 +11,9 @@
 
 namespace Eloy {
 
-class EngineParameters;
+class PBDSolverParameters;
 
-class Engine {
+class PBDVerletSolver {
 public:
 
     enum SolverMode {
@@ -83,8 +83,8 @@ private:
     //utilitary functions
     inline float s_coor(float rl);
     inline float resolve_collision(float value, float min, float max);
+    
     void findNeighborsUniformGrid();
-
     void findNeighborsUniformGridMinimalStrategy();
 
     inline void clearNeighbors();
@@ -113,9 +113,9 @@ public:
 
 friend class IParticlesData;
 friend class AABBParticlesData;
-friend class EngineImGui;
+friend class PBDVerletSolverImGui;
 
-Engine(const EngineParameters& parameters);
+PBDVerletSolver(const PBDSolverParameters& parameters);
 void step();
 
 
@@ -127,7 +127,7 @@ float getDiameter() {
 }
 
 //todo
-void getParameters(EngineParameters& out) const;
+void getParameters(PBDSolverParameters& out) const;
 void writeParticlesToJson(const std::string& filepath);
 
 };

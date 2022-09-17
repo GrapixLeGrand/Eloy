@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Engine.hpp"
+#include "PBDVerletSolver.hpp"
 
 //#ifndef LEVEK_INCLUDE_IMGUI
 //#define LEVEK_INCLUDE_IMGUI
@@ -10,12 +10,12 @@
 #include "imGuIZMO.quat/imGuIZMOquat.h"
 
 namespace Eloy {
-class EngineImGui {
-    Engine& engine;
+class PBDVerletSolverImGui {
+    PBDVerletSolver& engine;
     int selectedSolver = 1;
     int selectedNeighbor = 1;
 public:
-    EngineImGui(Engine& engine): engine(engine) {};
+    PBDVerletSolverImGui(PBDVerletSolver& engine): engine(engine) {};
     bool imgui() {
         bool quit = false;
         ImGui::BeginTabBar("Engine");
@@ -29,11 +29,11 @@ public:
             
             static const char* solverTypes[]{"single-thread", "multi-threaded"}; 
             ImGui::Combo("solver", &selectedSolver, solverTypes, IM_ARRAYSIZE(solverTypes));
-            engine.mSolverMode = (Engine::SolverMode) selectedSolver;
+            engine.mSolverMode = (PBDVerletSolver::SolverMode) selectedSolver;
 
             static const char* neighborTypes[]{"basic-verlet", "minimalist"}; 
             ImGui::Combo("neighbors", &selectedNeighbor, neighborTypes, IM_ARRAYSIZE(neighborTypes));
-            engine.mNeighborMode = (Engine::NeighborMode) selectedNeighbor;
+            engine.mNeighborMode = (PBDVerletSolver::NeighborMode) selectedNeighbor;
 
 
             ImGui::Text("particle radius %.3f", engine.mParticleRadius);

@@ -35,17 +35,17 @@ int main(int argc, char** argv) {
     //mainFb.addColorAttachment(&sceneResult, 0);
     mainFb.addAttachment(&sceneDepthStencil, Levek::FrameBufferProperties::AttachementType::DEPTH);
 
-    Eloy::EngineParameters parameters;
+    Eloy::PBDSolverParameters parameters;
     //parameters.mParticuleRadius = 0.25f;
     glm::vec3 min_pos = {0.5, 0.5, 0.5};
-    glm::vec3 max_pos = {5, 10, 5};
-    glm::vec3 offset = {3, 3, 3};
+    glm::vec3 max_pos = {4, 10, 4};
+    glm::vec3 offset = {0, 3, 0};
     Eloy::AABBParticlesData aabb1(min_pos + offset, max_pos + offset, {1, 0, 0, 1});
 
     parameters.mParticlesData.push_back(&aabb1);
 
-    Eloy::Engine particleEngine(parameters);
-    Eloy::EngineImGui engineImGui(particleEngine);
+    Eloy::PBDVerletSolver particleEngine(parameters);
+    Eloy::PBDVerletSolverImGui engineImGui(particleEngine);
     
     Eloy::ErrorCode err = Eloy::ErrorCode::ELOY_ERROR_OK;
     float imguiScaleFactor = 0.6f;
@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
 
         if (engineImGui.imgui()) {
             particleEngine.getParameters(parameters);
-            particleEngine = Eloy::Engine(parameters);
+            particleEngine = Eloy::PBDVerletSolver(parameters);
             //engineImGui = Eloy::EngineImGui(particleEngine);
         }
 
