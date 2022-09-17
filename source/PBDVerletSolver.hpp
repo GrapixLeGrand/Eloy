@@ -113,7 +113,7 @@ public:
 
 friend class IParticlesData;
 friend class AABBParticlesData;
-friend class PBDVerletSolverImGui;
+friend class PBDSolverImGui;
 
 PBDVerletSolver(const PBDSolverParameters& parameters);
 void step();

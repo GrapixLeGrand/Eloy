@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
     
     Eloy::ErrorCode err = Eloy::ELOY_ERROR_OK;
     Eloy::ParticlesPipelineSate particleRendering(engine, particleEngine.getPositions(), particleEngine.getColors(), err);
-    Eloy::PBDVerletSolverImGui engineImGui(particleEngine);
+    Eloy::PBDSolverImGui engineImGui;
 
     Levek::FrameBuffer mainFb(resolutionX, resolutionY);
     Levek::Texture sceneResult(resolutionX, resolutionY, Levek::TextureParameters::TextureType::RGB);
@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
         fps += " fps";
         ImGui::Text(fps.c_str());
 
-        if (engineImGui.imgui()) {
+        if (engineImGui.imgui(particleEngine)) {
             particleEngine.getParameters(parameters);
             particleEngine = Eloy::PBDVerletSolver(parameters);
             //engineImGui = Eloy::EngineImGui(particleEngine);

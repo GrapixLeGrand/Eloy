@@ -6,7 +6,7 @@
 #include "ParticlesData.hpp"
 #include "ParticlesRendering.hpp"
 #include "ParticlesRenderingSpf.hpp"
-#include "PBDVerletSolverImGui.hpp"
+#include "PBDSolverImGui.hpp"
 
 #include <utility>
 

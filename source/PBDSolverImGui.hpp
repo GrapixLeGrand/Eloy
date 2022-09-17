@@ -10,13 +10,13 @@
 #include "imGuIZMO.quat/imGuIZMOquat.h"
 
 namespace Eloy {
-class PBDVerletSolverImGui {
-    PBDVerletSolver& engine;
+class PBDSolverImGui {
+    //PBDVerletSolver& engine;
     int selectedSolver = 1;
     int selectedNeighbor = 1;
 public:
-    PBDVerletSolverImGui(PBDVerletSolver& engine): engine(engine) {};
-    bool imgui() {
+    //PBDSolverImGui(PBDVerletSolver& engine): engine(engine) {};
+    bool imgui(PBDVerletSolver& engine) {
         bool quit = false;
         ImGui::BeginTabBar("Engine");
         if (ImGui::BeginTabItem("Parameters")) {
