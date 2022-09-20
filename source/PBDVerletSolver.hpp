@@ -8,12 +8,13 @@
 #include <vector>
 #include <unordered_set>
 #include <string>
+#include "PBDSolver.hpp"
 
 namespace Eloy {
 
 class PBDSolverParameters;
 
-class PBDVerletSolver {
+class PBDVerletSolver : public PBDSolver {
 public:
 
     enum SolverMode {
@@ -28,17 +29,22 @@ public:
 
 private:
 
-    int mX = 0, mY = 0, mZ = 0;
-    AABB mAABB;
+    //PBDSolverParameters mParameters;
 
-    float mParticleRadius;
+    //int mX = 0, mY = 0, mZ = 0;
+    AABB mAABB;
+    int selectedSolver = 1;
+    int selectedNeighbor = 1;
+    
+    /*float mParticleRadius;
     float mParticleDiameter;
     float mKernelRadius;
     float mkernelFactor;
-    float mBoundaryCollisionCoeff;
+    float mBoundaryCollisionCoeff;*/
 
-    CubicKernel mCubicKernel;
+    
 
+    /*
     //rest density of fluid
     float mRestDensity;
     //mass of each particle
@@ -56,7 +62,7 @@ private:
     float mEpsilonCollision = static_cast<float>(0.01);
 
     float mTimeStep;
-    int mSubsteps = 1;
+    int mSubsteps = 1;*/
 
     std::vector<glm::vec3> mVelocities;
     std::vector<glm::vec3> mPositions;
@@ -109,25 +115,23 @@ private:
     NeighborMode mNeighborMode = VERLET_BASIC;
 public:
 
-
-
 friend class IParticlesData;
 friend class AABBParticlesData;
 friend class PBDSolverImGui;
 
 PBDVerletSolver(const PBDSolverParameters& parameters);
-void step();
-
+virtual void step();
+virtual bool imgui();
 
 const std::vector<glm::vec3>& getPositions() const;
 const std::vector<glm::vec4>& getColors() const;
 
 float getDiameter() {
-    return mParticleDiameter;
+    return 2.0f * mParameters.mParticleRadius;
 }
 
 //todo
-void getParameters(PBDSolverParameters& out) const;
+PBDSolverParameters getParameters() const;
 void writeParticlesToJson(const std::string& filepath);
 
 };

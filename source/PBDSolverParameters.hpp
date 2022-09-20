@@ -2,7 +2,7 @@
 
 #include <vector>
 #include "glm/glm.hpp"
-#include "ParticlesData.hpp"
+//#include "ParticlesData.hpp"
 
 namespace Eloy {
 /*
@@ -25,12 +25,13 @@ public:
     std::vector<IParticlesData*> mParticlesData;
 };*/
 
+class IParticlesData;
 
 //worked well with the sim with the pressure uncorrected
 class PBDSolverParameters {
 public:
     int mX = 6, mY = 15, mZ = 6;
-    float mParticuleRadius          = static_cast<float>(0.1);
+    float mParticleRadius          = static_cast<float>(0.1);
     float mKernelRadius             = static_cast<float>(0.32);
     float mKernelFactor             = static_cast<float>(1);
     float mBoundaryCollisionCoeff   = static_cast<float>(1.2);

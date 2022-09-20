@@ -1,5 +1,5 @@
 #pragma once
-
+/*
 #include "PBDVerletSolver.hpp"
 
 //#ifndef LEVEK_INCLUDE_IMGUI
@@ -20,7 +20,6 @@ public:
         bool quit = false;
         ImGui::BeginTabBar("Engine");
         if (ImGui::BeginTabItem("Parameters")) {
-            
 
             ImGui::Text("%d particles %lf ms", engine.mNumParticles, engine.mSolverMs);
             ImGui::Text("%d cells %lf ms", engine.mNumGridCells, engine.mNeighborMs);
@@ -86,4 +85,4 @@ public:
         return quit;
     }
 };
-}
+}*/

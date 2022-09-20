@@ -1,7 +1,6 @@
 #include "Eloy.hpp"
 
 #include "glm/gtc/constants.hpp"
-#include "PBDSolverParameters.hpp"
 #include "profiling/tsc_x86.hpp"
 #include "nlohmann/json.hpp"
 #include "omp.h"
@@ -11,23 +10,23 @@
 
 namespace Eloy {    
 
-PBDVerletSolver::PBDVerletSolver(const PBDSolverParameters& parameters) {
+PBDVerletSolver::PBDVerletSolver(const PBDSolverParameters& parameters): PBDSolver(parameters) {
 
-    mX = parameters.mX;
+    /*mX = parameters.mX;
     mY = parameters.mY;
-    mZ = parameters.mZ;
+    mZ = parameters.mZ;*/
 
-    mAABB = AABB({0, 0, 0} , {mX, mY, mZ});
+    mAABB = AABB({0, 0, 0} , {mParameters.mX, mParameters.mY, mParameters.mZ});
 
-    mParticleRadius = parameters.mParticuleRadius;
+    /*mParticleRadius = parameters.mParticuleRadius;
     mParticleDiameter = parameters.mParticuleRadius * static_cast<float>(2);
     mKernelRadius = parameters.mKernelRadius;
     mkernelFactor = parameters.mKernelFactor;
-    mBoundaryCollisionCoeff = parameters.mBoundaryCollisionCoeff;
+    mBoundaryCollisionCoeff = parameters.mBoundaryCollisionCoeff;*/
 
-    mCubicKernel = CubicKernel(mKernelRadius, parameters.mKernelFactor);
+    //mCubicKernel = CubicKernel(mParameters.mKernelRadius, parameters.mKernelFactor);
 
-    mRestDensity = parameters.mRestDensity;
+    /*mRestDensity = parameters.mRestDensity;
     mMass = parameters.mMass;
     mGravity = parameters.mGravity;
 
@@ -40,7 +39,7 @@ PBDVerletSolver::PBDVerletSolver(const PBDSolverParameters& parameters) {
     mEpsilonVorticity = parameters.mEpsilonVorticity;
 
     mTimeStep = parameters.mTimeStep;
-    mSubsteps = parameters.mSubsteps;
+    mSubsteps = parameters.mSubsteps;*/
 
     for (const IParticlesData* data : parameters.mParticlesData) {
         data->addParticlesData(this);
@@ -54,11 +53,11 @@ PBDVerletSolver::PBDVerletSolver(const PBDSolverParameters& parameters) {
     mParallelViscosities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
 
     mNeighbors = std::vector<std::vector<int>>(mNumParticles, std::vector<int>{});
-    mCellSize = mKernelRadius * 0.5f;
+    mCellSize = mParameters.mKernelRadius * 0.5f;
 
-    mGridX = static_cast<float>(mX / mCellSize) + 1;
-    mGridY = static_cast<float>(mY / mCellSize) + 1;
-    mGridZ = static_cast<float>(mZ / mCellSize) + 1;
+    mGridX = static_cast<float>(mParameters.mX / mCellSize) + 1;
+    mGridY = static_cast<float>(mParameters.mY / mCellSize) + 1;
+    mGridZ = static_cast<float>(mParameters.mZ / mCellSize) + 1;
 
     mNumGridCells = mGridX * mGridY * mGridZ;
     mUniformGrid = std::vector<std::vector<int>>(mNumGridCells, std::vector<int>{});
@@ -114,26 +113,27 @@ PBDVerletSolver::PBDVerletSolver(const PBDSolverParameters& parameters) {
 
 inline float PBDVerletSolver::s_coor(float rl) {
     float result = static_cast<float>(0);
-    float W = mCubicKernel.W(mSCorrDeltaQ);
+    float W = mCubicKernel.W(mParameters.mSCorrDeltaQ);
     if (W > 0.001f) { //glm::epsilon<float>()
-        result = -mSCorrK * std::pow(mCubicKernel.W(rl) / W, mSCorrN);
+        result = -mParameters.mSCorrK * std::pow(mCubicKernel.W(rl) / W, mParameters.mSCorrN);
     }
     CHECK_NAN_VAL(result);
     return result;
 }
 
+/*
 inline float PBDVerletSolver::resolve_collision(float value, float min, float max) {
 
     if (value <= min) {
-        return mEpsilonCollision;
+        return mParameters.mEpsilonCollision;
     }
 
     if (value > max) {
-        return max - mEpsilonCollision;
+        return max - mParameters.mEpsilonCollision;
     }
 
     return value;
-}
+}*/
 
 
 //Taken from Lustrine on github
@@ -192,15 +192,15 @@ void PBDVerletSolver::stepBasisMultiThreaded() {
     //integration
     #pragma omp parallel for schedule(static)
     for (int i = 0; i < mNumParticles; i++) {
-        mVelocities[i] += mGravity * mMass * mTimeStep;
+        mVelocities[i] += mParameters.mGravity * mParameters.mMass * mParameters.mTimeStep;
         CHECK_NAN_VEC(mVelocities[i]);
-        mPositionsStar[i] = mPositions[i] + mVelocities[i] * mTimeStep; //prediction
+        mPositionsStar[i] = mPositions[i] + mVelocities[i] * mParameters.mTimeStep; //prediction
         CHECK_NAN_VEC(mPositionsStar[i]);
     }
 
     findNeighbors();
 
-    for (int s = 0; s < mSubsteps; s++) {
+    for (int s = 0; s < mParameters.mSubsteps; s++) {
 
         //solve pressure
         #pragma omp parallel for schedule(static)
@@ -210,13 +210,13 @@ void PBDVerletSolver::stepBasisMultiThreaded() {
             for (int j = 0; j < mNeighbors[i].size(); j++) {
                 glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
                 float len = glm::length(ij);
-                densitiy += mMass * mCubicKernel.W(len);
+                densitiy += mParameters.mMass * mCubicKernel.W(len);
                 CHECK_NAN_VEC(ij);
             }
-            densitiy += mMass * mCubicKernel.W(0.0f);
+            densitiy += mParameters.mMass * mCubicKernel.W(0.0f);
 
             //equation 1
-            float constraint_i = (densitiy / mRestDensity) - static_cast<float>(1);
+            float constraint_i = (densitiy / mParameters.mRestDensity) - static_cast<float>(1);
             float constraint_gradient_sum = static_cast<float>(0);
             glm::vec3 grad_current_p = glm::vec3(0.0);
 
@@ -225,7 +225,7 @@ void PBDVerletSolver::stepBasisMultiThreaded() {
             //equation 8
             for (int j = 0; j < mNeighbors[i].size(); j++) {
                 glm::vec3 temp = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
-                glm::vec3 neighbor_grad = -(mMass / mRestDensity) * mCubicKernel.WGrad(temp);
+                glm::vec3 neighbor_grad = -(mParameters.mMass / mParameters.mRestDensity) * mCubicKernel.WGrad(temp);
                 CHECK_NAN_VEC(neighbor_grad);
                 constraint_gradient_sum += glm::dot(neighbor_grad, neighbor_grad);
                 grad_current_p -= neighbor_grad;
@@ -236,7 +236,7 @@ void PBDVerletSolver::stepBasisMultiThreaded() {
 
             mLambdas[i] = static_cast<float>(0);
             if (constraint_gradient_sum > 0.0f) {
-                mLambdas[i] = -constraint_i / (constraint_gradient_sum + mRelaxationEpsilon);
+                mLambdas[i] = -constraint_i / (constraint_gradient_sum + mParameters.mRelaxationEpsilon);
                 CHECK_NAN_VAL(mLambdas[i]);
             }
 
@@ -254,7 +254,7 @@ void PBDVerletSolver::stepBasisMultiThreaded() {
                 CHECK_NAN_VEC(mPressures[i]);
             }
 
-            mPressures[i] *= (1.0f / (mRestDensity * mMass));
+            mPressures[i] *= (1.0f / (mParameters.mRestDensity * mParameters.mMass));
             
         }
 
@@ -262,12 +262,12 @@ void PBDVerletSolver::stepBasisMultiThreaded() {
         for (int i = 0; i < mNumParticles; i++) {
             mPositionsStar[i] += mPressures[i];
             glm::vec3 dp = glm::vec3(0.0);
-            dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(1, 0, 0), glm::vec3(0, 0, 0), mPositionsStar[i], mParticleRadius);
-            dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(-1, 0, 0), glm::vec3(mX, 0, 0), mPositionsStar[i], mParticleRadius);
-            dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, 1, 0), glm::vec3(0, 0, 0), mPositionsStar[i], mParticleRadius);
-            dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, -1, 0), glm::vec3(0, mY, 0), mPositionsStar[i], mParticleRadius);
-            dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, 0, 1), glm::vec3(0, 0, 0), mPositionsStar[i], mParticleRadius);
-            dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, 0, -1), glm::vec3(0, 0, mZ), mPositionsStar[i], mParticleRadius);
+            dp += mParameters.mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(1, 0, 0), glm::vec3(0, 0, 0), mPositionsStar[i], mParameters.mParticleRadius);
+            dp += mParameters.mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(-1, 0, 0), glm::vec3(mParameters.mX, 0, 0), mPositionsStar[i], mParameters.mParticleRadius);
+            dp += mParameters.mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, 1, 0), glm::vec3(0, 0, 0), mPositionsStar[i], mParameters.mParticleRadius);
+            dp += mParameters.mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, -1, 0), glm::vec3(0, mParameters.mY, 0), mPositionsStar[i], mParameters.mParticleRadius);
+            dp += mParameters.mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, 0, 1), glm::vec3(0, 0, 0), mPositionsStar[i], mParameters.mParticleRadius);
+            dp += mParameters.mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, 0, -1), glm::vec3(0, 0, mParameters.mZ), mPositionsStar[i], mParameters.mParticleRadius);
             mPositionsStar[i] += dp;
         }
 
@@ -283,34 +283,34 @@ void PBDVerletSolver::stepBasisMultiThreaded() {
         for (int j = 0; j < mNeighbors[i].size(); j++) {
             //density
             glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
-            mDensities[i] += mMass * mCubicKernel.W(glm::length(ij));
+            mDensities[i] += mParameters.mMass * mCubicKernel.W(glm::length(ij));
         }
-        mDensities[i] += mMass * mCubicKernel.W(0.0f);
+        mDensities[i] += mParameters.mMass * mCubicKernel.W(0.0f);
 
         mAngularVelocities[i] = {0, 0, 0};
         for (int j = 0; j < mNeighbors[i].size(); j++) {
             //angular velocity
             glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
             glm::vec3 vij = mVelocities[mNeighbors[i][j]] - mVelocities[i];
-            mAngularVelocities[i] += glm::cross(vij, mCubicKernel.WGrad(ij)) * (mMass / mDensities[i]);
+            mAngularVelocities[i] += glm::cross(vij, mCubicKernel.WGrad(ij)) * (mParameters.mMass / mDensities[i]);
         }
     }
 
     #pragma omp parallel for schedule(static)
     for (int i = 0; i < mNumParticles; i++) {
-        mVelocities[i] = (mPositionsStar[i] - mPositions[i]) / mTimeStep;
+        mVelocities[i] = (mPositionsStar[i] - mPositions[i]) / mParameters.mTimeStep;
         
         //vorticity confinment
         glm::vec3 N = {0, 0, 0};
         for (int j = 0; j < mNeighbors[i].size(); j++) {
             glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
-            N += mCubicKernel.WGrad(ij) * (mMass / mDensities[i]) * glm::length(mAngularVelocities[mNeighbors[i][j]]);
+            N += mCubicKernel.WGrad(ij) * (mParameters.mMass / mDensities[i]) * glm::length(mAngularVelocities[mNeighbors[i][j]]);
         }
         float NLength = glm::length(N);
         if (NLength > 0.0f) {
             N /= NLength;
-            glm::vec3 vorticity = glm::cross(N, mAngularVelocities[i]) * mEpsilonVorticity;
-            mVelocities[i] += mTimeStep * mMass * vorticity; 
+            glm::vec3 vorticity = glm::cross(N, mAngularVelocities[i]) * mParameters.mEpsilonVorticity;
+            mVelocities[i] += mParameters.mTimeStep * mParameters.mMass * vorticity; 
         }
     }
 
@@ -322,13 +322,13 @@ void PBDVerletSolver::stepBasisMultiThreaded() {
             glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
             glm::vec3 vij = mVelocities[mNeighbors[i][j]] - mVelocities[i];
             if (mDensities[mNeighbors[i][j]] > 0.0f)
-                mParallelViscosities[i] += vij * (mMass / mDensities[mNeighbors[i][j]]) * mCubicKernel.W(glm::length(ij));
+                mParallelViscosities[i] += vij * (mParameters.mMass / mDensities[mNeighbors[i][j]]) * mCubicKernel.W(glm::length(ij));
         }
     }
 
     #pragma omp parallel for schedule(static)
     for (int i = 0; i < mNumParticles; i++) {
-        mVelocities[i] += mParallelViscosities[i] * mCXsph;
+        mVelocities[i] += mParallelViscosities[i] * mParameters.mCXsph;
         mPositions[i] = mPositionsStar[i];
     }
 
@@ -338,9 +338,9 @@ void PBDVerletSolver::stepBasisSingleThreaded() {
 
     //integration
     for (int i = 0; i < mNumParticles; i++) {
-        mVelocities[i] += mGravity * mMass * mTimeStep;
+        mVelocities[i] += mParameters.mGravity * mParameters.mMass * mParameters.mTimeStep;
         CHECK_NAN_VEC(mVelocities[i]);
-        mPositionsStar[i] = mPositions[i] + mVelocities[i] * mTimeStep; //prediction
+        mPositionsStar[i] = mPositions[i] + mVelocities[i] * mParameters.mTimeStep; //prediction
         CHECK_NAN_VEC(mPositionsStar[i]);
     }
 
@@ -350,7 +350,7 @@ void PBDVerletSolver::stepBasisSingleThreaded() {
 
     mSolverCycles = start_tsc();
 
-    for (int s = 0; s < mSubsteps; s++) {
+    for (int s = 0; s < mParameters.mSubsteps; s++) {
 
         //solve pressure
         for (int i = 0; i < mNumParticles; i++) {
@@ -359,13 +359,13 @@ void PBDVerletSolver::stepBasisSingleThreaded() {
             for (int j = 0; j < mNeighbors[i].size(); j++) {
                 glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
                 float len = glm::length(ij);
-                densitiy += mMass * mCubicKernel.W(len);
+                densitiy += mParameters.mMass * mCubicKernel.W(len);
                 CHECK_NAN_VEC(ij);
             }
-            densitiy += mMass * mCubicKernel.W(0.0f);
+            densitiy += mParameters.mMass * mCubicKernel.W(0.0f);
 
             //equation 1
-            float constraint_i = (densitiy / mRestDensity) - static_cast<float>(1);
+            float constraint_i = (densitiy / mParameters.mRestDensity) - static_cast<float>(1);
             float constraint_gradient_sum = static_cast<float>(0);
             glm::vec3 grad_current_p = glm::vec3(0.0);
 
@@ -374,7 +374,7 @@ void PBDVerletSolver::stepBasisSingleThreaded() {
             //equation 8
             for (int j = 0; j < mNeighbors[i].size(); j++) {
                 glm::vec3 temp = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
-                glm::vec3 neighbor_grad = -(mMass / mRestDensity) * mCubicKernel.WGrad(temp);
+                glm::vec3 neighbor_grad = -(mParameters.mMass / mParameters.mRestDensity) * mCubicKernel.WGrad(temp);
                 CHECK_NAN_VEC(neighbor_grad);
                 constraint_gradient_sum += glm::dot(neighbor_grad, neighbor_grad);
                 grad_current_p -= neighbor_grad;
@@ -385,7 +385,7 @@ void PBDVerletSolver::stepBasisSingleThreaded() {
 
             mLambdas[i] = static_cast<float>(0);
             if (constraint_gradient_sum > 0.0f) {
-                mLambdas[i] = -constraint_i / (constraint_gradient_sum + mRelaxationEpsilon);
+                mLambdas[i] = -constraint_i / (constraint_gradient_sum + mParameters.mRelaxationEpsilon);
                 CHECK_NAN_VAL(mLambdas[i]);
             }
 
@@ -402,19 +402,19 @@ void PBDVerletSolver::stepBasisSingleThreaded() {
                 CHECK_NAN_VEC(mPressures[i]);
             }
 
-            mPressures[i] *= (1.0f / (mRestDensity * mMass));
+            mPressures[i] *= (1.0f / (mParameters.mRestDensity * mParameters.mMass));
             
         }
 
         for (int i = 0; i < mNumParticles; i++) {
             mPositionsStar[i] += mPressures[i];
             glm::vec3 dp = glm::vec3(0.0);
-            dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(1, 0, 0), glm::vec3(0, 0, 0), mPositionsStar[i], mParticleRadius);
-            dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(-1, 0, 0), glm::vec3(mX, 0, 0), mPositionsStar[i], mParticleRadius);
-            dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, 1, 0), glm::vec3(0, 0, 0), mPositionsStar[i], mParticleRadius);
-            dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, -1, 0), glm::vec3(0, mY, 0), mPositionsStar[i], mParticleRadius);
-            dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, 0, 1), glm::vec3(0, 0, 0), mPositionsStar[i], mParticleRadius);
-            dp += mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, 0, -1), glm::vec3(0, 0, mZ), mPositionsStar[i], mParticleRadius);
+            dp += mParameters.mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(1, 0, 0), glm::vec3(0, 0, 0), mPositionsStar[i], mParameters.mParticleRadius);
+            dp += mParameters.mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(-1, 0, 0), glm::vec3(mParameters.mX, 0, 0), mPositionsStar[i], mParameters.mParticleRadius);
+            dp += mParameters.mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, 1, 0), glm::vec3(0, 0, 0), mPositionsStar[i], mParameters.mParticleRadius);
+            dp += mParameters.mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, -1, 0), glm::vec3(0, mParameters.mY, 0), mPositionsStar[i], mParameters.mParticleRadius);
+            dp += mParameters.mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, 0, 1), glm::vec3(0, 0, 0), mPositionsStar[i], mParameters.mParticleRadius);
+            dp += mParameters.mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, 0, -1), glm::vec3(0, 0, mParameters.mZ), mPositionsStar[i], mParameters.mParticleRadius);
             mPositionsStar[i] += dp;
         }
 
@@ -429,33 +429,33 @@ void PBDVerletSolver::stepBasisSingleThreaded() {
         for (int j = 0; j < mNeighbors[i].size(); j++) {
             //density
             glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
-            mDensities[i] += mMass * mCubicKernel.W(glm::length(ij));
+            mDensities[i] += mParameters.mMass * mCubicKernel.W(glm::length(ij));
         }
-        mDensities[i] += mMass * mCubicKernel.W(0.0f);
+        mDensities[i] += mParameters.mMass * mCubicKernel.W(0.0f);
 
         mAngularVelocities[i] = {0, 0, 0};
         for (int j = 0; j < mNeighbors[i].size(); j++) {
             //angular velocity
             glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
             glm::vec3 vij = mVelocities[mNeighbors[i][j]] - mVelocities[i];
-            mAngularVelocities[i] += glm::cross(vij, mCubicKernel.WGrad(ij)) * (mMass / mDensities[i]);
+            mAngularVelocities[i] += glm::cross(vij, mCubicKernel.WGrad(ij)) * (mParameters.mMass / mDensities[i]);
         }
     }
 
     for (int i = 0; i < mNumParticles; i++) {
-        mVelocities[i] = (mPositionsStar[i] - mPositions[i]) / mTimeStep;
+        mVelocities[i] = (mPositionsStar[i] - mPositions[i]) / mParameters.mTimeStep;
 
         //vorticity confinment
         glm::vec3 N = {0, 0, 0};
         for (int j = 0; j < mNeighbors[i].size(); j++) {
             glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
-            N += mCubicKernel.WGrad(ij) * (mMass / mDensities[i]) * glm::length(mAngularVelocities[mNeighbors[i][j]]);
+            N += mCubicKernel.WGrad(ij) * (mParameters.mMass / mDensities[i]) * glm::length(mAngularVelocities[mNeighbors[i][j]]);
         }
         float NLength = glm::length(N);
         if (NLength > 0.0f) {
             N /= NLength;
-            glm::vec3 vorticity = glm::cross(N, mAngularVelocities[i]) * mEpsilonVorticity;
-            mVelocities[i] += mTimeStep * mMass * vorticity; 
+            glm::vec3 vorticity = glm::cross(N, mAngularVelocities[i]) * mParameters.mEpsilonVorticity;
+            mVelocities[i] += mParameters.mTimeStep * mParameters.mMass * vorticity; 
         }
 
         //xsph viscosity
@@ -464,9 +464,9 @@ void PBDVerletSolver::stepBasisSingleThreaded() {
             glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
             glm::vec3 vij = mVelocities[mNeighbors[i][j]] - mVelocities[i];
             if (mDensities[mNeighbors[i][j]] > 0.0f)
-                viscosity += vij * (mMass / mDensities[mNeighbors[i][j]]) * mCubicKernel.W(glm::length(ij));
+                viscosity += vij * (mParameters.mMass / mDensities[mNeighbors[i][j]]) * mCubicKernel.W(glm::length(ij));
         }
-        mVelocities[i] += viscosity * mCXsph;
+        mVelocities[i] += viscosity * mParameters.mCXsph;
         mPositions[i] = mPositionsStar[i];
     }
 
@@ -562,7 +562,7 @@ void PBDVerletSolver::findNeighborsUniformGrid() {
                                     const int neighbor_index = mUniformGrid[neighbor_cell_id][j];
                                     const glm::vec3& other = mPositionsStar[neighbor_index];
                                     const glm::vec3 tmp = self - other;
-                                    if (glm::dot(tmp, tmp) <= mKernelRadius * mKernelRadius) {
+                                    if (glm::dot(tmp, tmp) <= mParameters.mKernelRadius * mParameters.mKernelRadius) {
                                         mNeighbors[current_index].push_back(neighbor_index);
                                     }
                                 }
@@ -616,7 +616,7 @@ void PBDVerletSolver::findNeighborsUniformGridMinimalStrategy() {
                     const int neighbor_index = mUniformGrid[neighborCellId][j];
                     const glm::vec3& other = mPositionsStar[neighbor_index];
                     const glm::vec3 tmp = self - other;
-                    if (glm::dot(tmp, tmp) <= mKernelRadius * mKernelRadius) {
+                    if (glm::dot(tmp, tmp) <= mParameters.mKernelRadius * mParameters.mKernelRadius) {
                         mNeighbors[current_index].push_back(neighbor_index);
                     }
                 }
@@ -626,6 +626,10 @@ void PBDVerletSolver::findNeighborsUniformGridMinimalStrategy() {
     }
 }
 
+PBDSolverParameters PBDVerletSolver::getParameters() const {
+    return mParameters;
+}
+/*
 void PBDVerletSolver::getParameters(PBDSolverParameters& out) const {
 
     out.mParticuleRadius = mParticleRadius;
@@ -647,7 +651,7 @@ void PBDVerletSolver::getParameters(PBDSolverParameters& out) const {
     out.mSubsteps = mSubsteps;
     out.mTimeStep = mTimeStep;
     out.mKernelRadius = mKernelRadius;
-}
+}*/
 
 const std::vector<glm::vec3>& PBDVerletSolver::getPositions() const {
     return mPositions;
@@ -684,6 +688,28 @@ void PBDVerletSolver::writeParticlesToJson(const std::string& filepath) {
 
     std::ofstream file(filepath);
     file << jsonParticlesData;
+}
+
+
+bool PBDVerletSolver::imgui() {
+    bool quit = PBDSolver::imgui();
+    if (ImGui::BeginTabItem("Parameters")) {
+        ImGui::Text("%d particles %lf ms", mNumParticles, mSolverMs);
+        ImGui::Text("%d cells %lf ms", mNumGridCells, mNeighborMs);
+        ImGui::Text("simulation (everything) %lf ms (%lf fps)", mSolverFullMs, (1.0 / mSolverFullMs) * 1000.0);
+
+        static const char* solverTypes[]{"single-thread", "multi-threaded"}; 
+        ImGui::Combo("solver", &selectedSolver, solverTypes, IM_ARRAYSIZE(solverTypes));
+        mSolverMode = (PBDVerletSolver::SolverMode) selectedSolver;
+
+        static const char* neighborTypes[]{"basic-verlet", "minimalist"}; 
+        ImGui::Combo("neighbors", &selectedNeighbor, neighborTypes, IM_ARRAYSIZE(neighborTypes));
+        mNeighborMode = (PBDVerletSolver::NeighborMode) selectedNeighbor;
+        if (ImGui::Button("save state")) {
+            writeParticlesToJson(ELOY_BUILD_DIRECTORY"/save.json");
+        }
+    }
+    return quit;
 }
 
 

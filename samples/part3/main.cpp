@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
     parameters.mParticlesData.push_back(&aabb1);
 
     Eloy::PBDVerletSolver particleEngine(parameters);
-    Eloy::PBDSolverImGui engineImGui;
+    //Eloy::PBDSolverImGui engineImGui;
     
     Eloy::ErrorCode err = Eloy::ErrorCode::ELOY_ERROR_OK;
     float imguiScaleFactor = 0.6f;
@@ -93,8 +93,8 @@ int main(int argc, char** argv) {
         //ImGui::Image((void*)(intptr_t)sceneResult.getId(), ImVec2(static_cast<float>(resolutionX) * imguiScaleFactor, static_cast<float>(resolutionY) * imguiScaleFactor), ImVec2(0, 1), ImVec2(1, 0));
         spfParticleRendering.imGui(imguiScaleFactor);
 
-        if (engineImGui.imgui(particleEngine)) {
-            particleEngine.getParameters(parameters);
+        if (particleEngine.imgui()) {
+            particleEngine.getParameters();
             particleEngine = Eloy::PBDVerletSolver(parameters);
             //engineImGui = Eloy::EngineImGui(particleEngine);
         }

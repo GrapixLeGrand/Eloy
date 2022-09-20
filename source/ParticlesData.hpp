@@ -43,7 +43,7 @@ public:
             return ELOY_ERROR_DOMAIN;
         }
 
-        glm::vec3 particles_dims_f = dims / engine->mParticleDiameter;
+        glm::vec3 particles_dims_f = dims / (2.0f * engine->mParameters.mParticleRadius);
         glm::ivec3 particles_dim = { static_cast<int>(particles_dims_f.x) + 1,  static_cast<int>(particles_dims_f.y) + 1, static_cast<int>(particles_dims_f.z) + 1 };
         
         int numNewParticles = particles_dim.x * particles_dim.y * particles_dim.z;
@@ -55,12 +55,12 @@ public:
         engine->mNumParticles += numNewParticles;
         engine->resize(engine->mNumParticles);
 
-        float invDiameter = 1.0f / engine->mParticleDiameter;
+        float invDiameter = 1.0f / (2.0f * engine->mParameters.mParticleRadius);
         for (int y = 0; y < particles_dim.y; y++) {
             for (int z = 0; z < particles_dim.z; z++) {
                 for (int x = 0; x < particles_dim.x; x++) {
                     glm::vec3 newRelPosition = glm::vec3(x, y, z);
-                    newRelPosition *= engine->mParticleDiameter;
+                    newRelPosition *= (2.0f * engine->mParameters.mParticleRadius);
                     glm::vec3 newBasePosition = adjustedAABB.min;
                     engine->mPositions[particlePointer] = newBasePosition + newRelPosition;
                     engine->mColors[particlePointer] = mColor;
