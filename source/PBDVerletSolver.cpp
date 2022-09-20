@@ -474,11 +474,12 @@ void PBDVerletSolver::stepBasisSingleThreaded() {
     
 }
 
+/*
 void PBDVerletSolver::resize(size_t newSize) {
     mPositions.resize(newSize);
     mVelocities.resize(newSize);
     mColors.resize(newSize);
-}
+}*/
 
 inline int PBDVerletSolver::get_cell_id(glm::vec3 position) {
     //position = glm::clamp(position, glm::vec3(simulation->mCellSize * 0.5f), glm::vec3(simulation->domainX - simulation->mCellSize * 0.5f, simulation->domainY - simulation->mCellSize * 0.5f, simulation->domainZ - simulation->mCellSize * 0.5f));
@@ -693,6 +694,7 @@ void PBDVerletSolver::writeParticlesToJson(const std::string& filepath) {
 
 bool PBDVerletSolver::imgui() {
     bool quit = PBDSolver::imgui();
+    ImGui::BeginTabBar("Verlet solver");
     if (ImGui::BeginTabItem("Parameters")) {
         ImGui::Text("%d particles %lf ms", mNumParticles, mSolverMs);
         ImGui::Text("%d cells %lf ms", mNumGridCells, mNeighborMs);
@@ -709,6 +711,7 @@ bool PBDVerletSolver::imgui() {
             writeParticlesToJson(ELOY_BUILD_DIRECTORY"/save.json");
         }
     }
+    ImGui::EndTabBar();
     return quit;
 }
 

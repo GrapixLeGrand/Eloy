@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "PBDVerletSolver.hpp"
+#include "PBDSolver.hpp"
 #include "glm/glm.hpp"
 #include "Error.hpp"
 #include "AABB.hpp"
@@ -22,7 +22,7 @@ struct ParticlesDataTransform {
 class IParticlesData {
     //ParticlesDataTransform transform;
 public:
-    virtual ErrorCode addParticlesData(PBDVerletSolver* engine) const = 0;
+    virtual ErrorCode addParticlesData(PBDSolver* engine) const = 0;
 };
 
 
@@ -32,7 +32,7 @@ private:
     glm::vec4 mColor = {1, 1, 1, 1};
 public:
     AABBParticlesData(glm::vec3 min, glm::vec3 max, glm::vec4 color): AABB(min, max), mColor(color) {}
-    virtual ErrorCode addParticlesData(PBDVerletSolver* engine) const {
+    virtual ErrorCode addParticlesData(PBDSolver* engine) const {
         ParticlesDataPayload result;
 
         AABB adjustedAABB = AABB(this->min, this->max);

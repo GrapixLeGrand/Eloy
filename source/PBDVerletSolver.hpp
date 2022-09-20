@@ -32,40 +32,11 @@ private:
     //PBDSolverParameters mParameters;
 
     //int mX = 0, mY = 0, mZ = 0;
-    AABB mAABB;
+    //AABB mAABB;
     int selectedSolver = 1;
     int selectedNeighbor = 1;
-    
-    /*float mParticleRadius;
-    float mParticleDiameter;
-    float mKernelRadius;
-    float mkernelFactor;
-    float mBoundaryCollisionCoeff;*/
 
     
-
-    /*
-    //rest density of fluid
-    float mRestDensity;
-    //mass of each particle
-    float mMass;
-    glm::vec3 mGravity;
-    
-    float mRelaxationEpsilon;
-    float mSCorrDeltaQ;
-    float mSCorrK;
-    float mSCorrN;
-
-    float mCXsph;
-    float mEpsilonVorticity;
-
-    float mEpsilonCollision = static_cast<float>(0.01);
-
-    float mTimeStep;
-    int mSubsteps = 1;*/
-
-    std::vector<glm::vec3> mVelocities;
-    std::vector<glm::vec3> mPositions;
     std::vector<glm::vec3> mPositionsStar;
     std::vector<float> mDensities;
     std::vector<glm::vec3> mAngularVelocities;
@@ -84,7 +55,7 @@ private:
     std::vector<int> mCellsUsedStorage;
     std::vector<std::vector<int>> mCellsPrecomputedNeighbors;
 
-    int mNumParticles = 0;
+    //int mNumParticles = 0;
 
     //utilitary functions
     inline float s_coor(float rl);
@@ -96,8 +67,8 @@ private:
     inline void clearNeighbors();
     inline int get_cell_id(glm::vec3 position);
     inline bool check_index(int i, int min, int max);
-    void resize(size_t newSize);
-    std::vector<glm::vec4> mColors;
+    //void resize(size_t newSize);
+    
 
     //for profiling
     unsigned long long mSolverCycles = 0;
@@ -115,8 +86,7 @@ private:
     NeighborMode mNeighborMode = VERLET_BASIC;
 public:
 
-friend class IParticlesData;
-friend class AABBParticlesData;
+
 friend class PBDSolverImGui;
 
 PBDVerletSolver(const PBDSolverParameters& parameters);
