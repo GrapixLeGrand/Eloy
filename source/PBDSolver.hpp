@@ -13,6 +13,7 @@ namespace Eloy {
 class PBDSolver {
 private:
 protected:
+    
     PBDSolverParameters mParameters;
     CubicKernel mCubicKernel;
     AABB mAABB;
@@ -32,8 +33,8 @@ public:
 
     friend class IParticlesData;
     friend class AABBParticlesData;
+    PBDSolver(const PBDSolverParameters& params);
 
-    PBDSolver(const PBDSolverParameters& params) : mParameters(params), mCubicKernel(CubicKernel(params.mKernelRadius, params.mKernelFactor)) {};
 virtual void step() = 0;
 virtual bool imgui();
 

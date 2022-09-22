@@ -26,7 +26,7 @@ public:
 };*/
 
 class IParticlesData;
-
+//class PBDSolver;
 //worked well with the sim with the pressure uncorrected
 class PBDSolverParameters {
 public:
@@ -48,6 +48,11 @@ public:
     int mSubsteps                   = 2;
 
     std::vector<IParticlesData*> mParticlesData;
+    PBDSolverParameters(): mParticleDiameter(2.0f * mParticleRadius) {}
+private:
+    friend class PBDPackedSolver;
+    float mParticleDiameter = static_cast<float>(0);
+
 };
 
 /*

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "PBDSolver.hpp"
+//#include "PBDSolver.hpp"
 #include "glm/glm.hpp"
 #include "Error.hpp"
 #include "AABB.hpp"
@@ -18,6 +18,8 @@ struct ParticlesDataTransform {
     glm::vec3 position;
     glm::mat3 basis;
 };
+
+//class PBDSolver;
 
 class IParticlesData {
     //ParticlesDataTransform transform;

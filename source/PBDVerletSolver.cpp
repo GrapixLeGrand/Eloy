@@ -16,7 +16,7 @@ PBDVerletSolver::PBDVerletSolver(const PBDSolverParameters& parameters): PBDSolv
     mY = parameters.mY;
     mZ = parameters.mZ;*/
 
-    mAABB = AABB({0, 0, 0} , {mParameters.mX, mParameters.mY, mParameters.mZ});
+    //mAABB = AABB({0, 0, 0} , {mParameters.mX, mParameters.mY, mParameters.mZ});
 
     /*mParticleRadius = parameters.mParticuleRadius;
     mParticleDiameter = parameters.mParticuleRadius * static_cast<float>(2);
@@ -41,9 +41,9 @@ PBDVerletSolver::PBDVerletSolver(const PBDSolverParameters& parameters): PBDSolv
     mTimeStep = parameters.mTimeStep;
     mSubsteps = parameters.mSubsteps;*/
 
-    for (const IParticlesData* data : parameters.mParticlesData) {
+    /*for (const IParticlesData* data : parameters.mParticlesData) {
         data->addParticlesData(this);
-    }
+    }*/
     
     mPositionsStar = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
     mLambdas = std::vector<float>(mNumParticles, static_cast<float>(0));

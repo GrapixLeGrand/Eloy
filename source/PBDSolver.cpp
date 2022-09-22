@@ -1,6 +1,16 @@
 #include "PBDSolver.hpp"
 
+#include "ParticlesData.hpp"
+
 namespace Eloy {
+
+PBDSolver::PBDSolver(const PBDSolverParameters& params) : mParameters(params), mCubicKernel(CubicKernel(params.mKernelRadius, params.mKernelFactor)) {
+    mAABB = AABB({0, 0, 0} , {mParameters.mX, mParameters.mY, mParameters.mZ});
+    for (const IParticlesData* data : mParameters.mParticlesData) {
+        data->addParticlesData(this);
+    }
+}
+
 bool PBDSolver::imgui() {
     bool quit = false;
     ImGui::BeginTabBar("PBD Solver");

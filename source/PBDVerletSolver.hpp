@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <unordered_set>
+#include <set>
 #include <string>
 #include "PBDSolver.hpp"
 
@@ -34,7 +35,7 @@ private:
     //int mX = 0, mY = 0, mZ = 0;
     //AABB mAABB;
     int selectedSolver = 1;
-    int selectedNeighbor = 1;
+    int selectedNeighbor = 0;
 
     
     std::vector<glm::vec3> mPositionsStar;
