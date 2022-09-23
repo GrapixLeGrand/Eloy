@@ -25,6 +25,16 @@ public:
     std::vector<IParticlesData*> mParticlesData;
 };*/
 
+
+/**
+ * @brief Notes
+ * 
+ * The kernel radius must be 3 * particle radius. Draw 9 balls in a box, 
+ * you see that the side of the box is 3 radius of particles.
+ * This must be the size of a cell.
+ * 
+ */
+
 class IParticlesData;
 //class PBDSolver;
 //worked well with the sim with the pressure uncorrected
@@ -48,11 +58,14 @@ public:
     int mSubsteps                   = 2;
 
     std::vector<IParticlesData*> mParticlesData;
-    PBDSolverParameters(): mParticleDiameter(2.0f * mParticleRadius) {}
+    PBDSolverParameters(): mParticleDiameter(2.0f * mParticleRadius) {
+        //mKernelRadius = 1.5f * mParticleRadius;
+    }
+    float getDiameter() { return mParticleDiameter; }
 private:
     friend class PBDPackedSolver;
     float mParticleDiameter = static_cast<float>(0);
-
+    
 };
 
 /*

@@ -35,10 +35,12 @@ int main(int argc, char** argv) {
 
     parameters.mParticlesData.push_back(&aabb1);
 
-    Eloy::PBDVerletSolver particleEngine(parameters);
+    Eloy::PBDVerletSolver verletSolver(parameters);
+    Eloy::PBDPackedSolver packedSolver(parameters);
+    Eloy::PBDSolver* solver = &packedSolver;
     
     Eloy::ErrorCode err = Eloy::ELOY_ERROR_OK;
-    Eloy::ParticlesPipelineSate particleRendering(engine, particleEngine.getPositions(), particleEngine.getColors(), err);
+    Eloy::ParticlesPipelineSate particleRendering(engine, solver->getPositions(), solver->getColors(), err);
     //Eloy::PBDSolverImGui engineImGui;
 
     Levek::FrameBuffer mainFb(resolutionX, resolutionY);
@@ -65,9 +67,9 @@ int main(int argc, char** argv) {
         skybox.draw(&mainFb, renderer, camera.getView(), camera.getProjection());
         ground.draw(&mainFb, renderer, camera.getViewProjection());
         
-        particleEngine.step();
-        particleRendering.updatePositions(particleEngine.getPositions());
-        particleRendering.updateColors(particleEngine.getColors());
+        solver->step();
+        particleRendering.updatePositions(solver->getPositions());
+        particleRendering.updateColors(solver->getColors());
 
         particleRendering.setUniforms(
             camera.getViewProjection(),
@@ -75,7 +77,7 @@ int main(int argc, char** argv) {
             camera.getView(),
             camera.getViewInv(),
             glm::vec3(0, -1, 0),
-            particleEngine.getDiameter()
+            parameters.getDiameter()
         );
         particleRendering.draw(&mainFb, renderer);
 
@@ -91,9 +93,10 @@ int main(int argc, char** argv) {
         fps += " fps";
         ImGui::Text(fps.c_str());
 
-        if (particleEngine.imgui()) {
-            particleEngine.getParameters();
-            particleEngine = Eloy::PBDVerletSolver(parameters);
+        if (solver->imgui()) {
+            solver->reset();
+            //particleEngine.getParameters();
+            //particleEngine = Eloy::PBDVerletSolver(parameters);
             //engineImGui = Eloy::EngineImGui(particleEngine);
         }
 

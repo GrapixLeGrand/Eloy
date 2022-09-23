@@ -8,12 +8,17 @@
 #include "imgui.h"
 #include "imGuIZMO.quat/imGuIZMOquat.h"
 
+#include <string>
+
 namespace Eloy {
+
+
 
 class PBDSolver {
 private:
 protected:
     
+    PBDSolverParameters mParametersSave;
     PBDSolverParameters mParameters;
     CubicKernel mCubicKernel;
     AABB mAABB;
@@ -29,6 +34,8 @@ protected:
         mColors.resize(newSize);
     }
 
+    void writeParticlesToJson(const std::string& filepath);
+
 public:
 
     friend class IParticlesData;
@@ -37,6 +44,13 @@ public:
 
 virtual void step() = 0;
 virtual bool imgui();
+virtual void reset();
+
+
+const std::vector<glm::vec3>& getPositions() const;
+const std::vector<glm::vec4>& getColors() const;
+
+
 
 };
 

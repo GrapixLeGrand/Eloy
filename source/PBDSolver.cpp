@@ -1,11 +1,41 @@
 #include "PBDSolver.hpp"
 
 #include "ParticlesData.hpp"
+#include "nlohmann/json.hpp"
+
+#include <fstream>
 
 namespace Eloy {
 
-PBDSolver::PBDSolver(const PBDSolverParameters& params) : mParameters(params), mCubicKernel(CubicKernel(params.mKernelRadius, params.mKernelFactor)) {
+PBDSolver::PBDSolver(const PBDSolverParameters& params) : mParameters(params), mParametersSave(params), mCubicKernel(CubicKernel(params.mKernelRadius, params.mKernelFactor)) {
     mAABB = AABB({0, 0, 0} , {mParameters.mX, mParameters.mY, mParameters.mZ});
+    for (const IParticlesData* data : mParameters.mParticlesData) {
+        data->addParticlesData(this);
+    }
+}
+
+
+const std::vector<glm::vec3>& PBDSolver::getPositions() const {
+    return mPositions;
+}
+
+const std::vector<glm::vec4>& PBDSolver::getColors() const {
+    return mColors;
+}
+
+void PBDSolver::reset() {
+
+    printf("reset of parent solver\n");
+
+    mParameters = mParametersSave;
+    mCubicKernel = CubicKernel(mParameters.mKernelRadius, mParameters.mKernelFactor);
+    mAABB = AABB({0, 0, 0} , {mParameters.mX, mParameters.mY, mParameters.mZ});
+
+    mNumParticles = 0;
+    mVelocities.clear();
+    mPositions.clear();
+    mColors.clear();
+
     for (const IParticlesData* data : mParameters.mParticlesData) {
         data->addParticlesData(this);
     }
@@ -59,6 +89,35 @@ bool PBDSolver::imgui() {
         ImGui::EndTabBar();
     }
     return quit;
+}
+
+
+void PBDSolver::writeParticlesToJson(const std::string& filepath) {
+    auto jsonParticlesPositions = nlohmann::json::array();
+
+    for (int i = 0; i < mNumParticles; i++) {
+        auto jsonParticle = nlohmann::json::array();
+        for (int j = 0; j < 3; j++) {
+            jsonParticle.push_back(mPositions[i][j]);
+        }
+        jsonParticlesPositions .push_back(jsonParticle);
+    }
+
+    auto jsonParticlesColors = nlohmann::json::array();
+    for (int i = 0; i < mNumParticles; i++) {
+        auto jsonParticle = nlohmann::json::array();
+        for (int j = 0; j < 4; j++) {
+            jsonParticle.push_back(mColors[i][j]);
+        }
+        jsonParticlesColors.push_back(jsonParticle);
+    }
+    
+    auto jsonParticlesData = nlohmann::json::object();
+    jsonParticlesData["positions"] = jsonParticlesPositions;
+    jsonParticlesData["colors"] = jsonParticlesColors;
+
+    std::ofstream file(filepath);
+    file << jsonParticlesData;
 }
 
 }

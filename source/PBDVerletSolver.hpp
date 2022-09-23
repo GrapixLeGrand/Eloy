@@ -93,17 +93,19 @@ friend class PBDSolverImGui;
 PBDVerletSolver(const PBDSolverParameters& parameters);
 virtual void step();
 virtual bool imgui();
+virtual void reset();
 
-const std::vector<glm::vec3>& getPositions() const;
-const std::vector<glm::vec4>& getColors() const;
 
-float getDiameter() {
+//const std::vector<glm::vec3>& getPositions() const;
+//const std::vector<glm::vec4>& getColors() const;
+
+/*float getDiameter() {
     return 2.0f * mParameters.mParticleRadius;
-}
+}*/
 
 //todo
 PBDSolverParameters getParameters() const;
-void writeParticlesToJson(const std::string& filepath);
+
 
 };
 

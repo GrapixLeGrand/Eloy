@@ -27,7 +27,7 @@ private:
     inline float inside_kernel(float distance);
     inline float inside_kernel_2(float distance2);
     inline float s_coor(float rl);
-    
+
     double mSolverMs = 0.0;
     double mNeighborMs = 0.0;
     double mSolverFullMs = 0.0;
@@ -37,6 +37,7 @@ public:
 PBDPackedSolver(const PBDSolverParameters& parameters);
 virtual void step();
 virtual bool imgui();
+virtual void reset();
 
 };
 }

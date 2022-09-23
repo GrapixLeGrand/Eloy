@@ -53,7 +53,9 @@ PBDVerletSolver::PBDVerletSolver(const PBDSolverParameters& parameters): PBDSolv
     mParallelViscosities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
 
     mNeighbors = std::vector<std::vector<int>>(mNumParticles, std::vector<int>{});
-    mCellSize = mParameters.mKernelRadius * 0.5f;
+
+    //draw the cells on paper you see that the radius is 1.5 cell length. Do the equation then
+    mCellSize = mParameters.mKernelRadius * 0.5f; //(2.0f / 3.0f);
 
     mGridX = static_cast<float>(mParameters.mX / mCellSize) + 1;
     mGridY = static_cast<float>(mParameters.mY / mCellSize) + 1;
@@ -99,6 +101,10 @@ PBDVerletSolver::PBDVerletSolver(const PBDSolverParameters& parameters): PBDSolv
 
     }
 
+}
+
+void PBDVerletSolver::reset() {
+    
 }
 
 #define CHECK_NAN_VEC(V) \
@@ -654,42 +660,10 @@ void PBDVerletSolver::getParameters(PBDSolverParameters& out) const {
     out.mKernelRadius = mKernelRadius;
 }*/
 
-const std::vector<glm::vec3>& PBDVerletSolver::getPositions() const {
-    return mPositions;
-}
-
-const std::vector<glm::vec4>& PBDVerletSolver::getColors() const {
-    return mColors;
-}
 
 
-void PBDVerletSolver::writeParticlesToJson(const std::string& filepath) {
-    auto jsonParticlesPositions = nlohmann::json::array();
 
-    for (int i = 0; i < mNumParticles; i++) {
-        auto jsonParticle = nlohmann::json::array();
-        for (int j = 0; j < 3; j++) {
-            jsonParticle.push_back(mPositions[i][j]);
-        }
-        jsonParticlesPositions .push_back(jsonParticle);
-    }
 
-    auto jsonParticlesColors = nlohmann::json::array();
-    for (int i = 0; i < mNumParticles; i++) {
-        auto jsonParticle = nlohmann::json::array();
-        for (int j = 0; j < 4; j++) {
-            jsonParticle.push_back(mColors[i][j]);
-        }
-        jsonParticlesColors.push_back(jsonParticle);
-    }
-    
-    auto jsonParticlesData = nlohmann::json::object();
-    jsonParticlesData["positions"] = jsonParticlesPositions;
-    jsonParticlesData["colors"] = jsonParticlesColors;
-
-    std::ofstream file(filepath);
-    file << jsonParticlesData;
-}
 
 
 bool PBDVerletSolver::imgui() {

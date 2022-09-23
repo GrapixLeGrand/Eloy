@@ -14,15 +14,18 @@ PBDPackedSolver::PBDPackedSolver(const PBDSolverParameters& parameters): PBDSolv
     mAngularVelocities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
     mParallelViscosities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
 
-    mCellSize = mParameters.mKernelRadius * 0.5f;
+    mCellSize = mParameters.mKernelRadius * 0.5f; //* 0.5f; //(2.0f / 3.0f);
 
     mGridX = static_cast<int>(std::ceil(mParameters.mX / mCellSize)) + 2;
     mGridY = static_cast<int>(std::ceil(mParameters.mY / mCellSize)) + 2;
     mGridZ = static_cast<int>(std::ceil(mParameters.mZ / mCellSize)) + 2;
     
+    printf("grid x %d, mX %lf, cell size %lf\n", mGridX, (double) mParameters.mX, (double) mCellSize);
+
     mNumGridCells = mGridX * mGridY * mGridZ;
     int approximateMaxNeighbors = std::pow(mCellSize / mParameters.mParticleDiameter, 3);
     printf("approx. max neighbors %d\n", approximateMaxNeighbors);
+    printf("approx. max neighbors f %f\n", mCellSize / mParameters.mParticleDiameter);
     mUniformGrid = std::vector<std::vector<int>>(mNumGridCells, std::vector<int>(approximateMaxNeighbors));
     for (auto& v : mUniformGrid) v.clear();
     
@@ -32,15 +35,15 @@ inline int PBDPackedSolver::get_cell_id(glm::vec3 position) {
     //position = glm::clamp(position, glm::vec3(simulation->mCellSize * 0.5f), glm::vec3(simulation->domainX - simulation->mCellSize * 0.5f, simulation->domainY - simulation->mCellSize * 0.5f, simulation->domainZ - simulation->mCellSize * 0.5f));
     //CHECK_NAN_VEC(position);
     position /= mCellSize;
-    int x = glm::clamp(static_cast<int>(position.x), 0, mGridX-1) + 1;
-    int y = glm::clamp(static_cast<int>(position.y), 0, mGridY-1) + 1;
-    int z = glm::clamp(static_cast<int>(position.z), 0, mGridZ-1) + 1;
+    int x = glm::clamp(static_cast<int>(position.x), 0, mGridX-2) + 1;
+    int y = glm::clamp(static_cast<int>(position.y), 0, mGridY-2) + 1;
+    int z = glm::clamp(static_cast<int>(position.z), 0, mGridZ-2) + 1;
 
     int cell_id =
             y * mGridX * mGridZ +
             x * mGridZ +
             z;
-    cell_id = glm::clamp(cell_id, 0, mNumGridCells - 1);
+    //cell_id = glm::clamp(cell_id, 0, mNumGridCells - 1);
     return cell_id;
 }
 
@@ -75,11 +78,11 @@ void PBDPackedSolver::findNeighbors() {
 }
 
 inline float PBDPackedSolver::inside_kernel(float distance) {
-    return (distance <= mParameters.mKernelRadius) ? 1.0 : 0.0; 
+    return (distance <= mParameters.mKernelRadius) ? 1.0f : 0.0f; 
 }
 
 inline float PBDPackedSolver::inside_kernel_2(float distance2) {
-    return (distance2 <= (mParameters.mKernelRadius * mParameters.mKernelRadius)) ? 1.0 : 0.0; 
+    return (distance2 <= (mParameters.mKernelRadius * mParameters.mKernelRadius)) ? 1.0f : 0.0f; 
 }
 
 
@@ -108,6 +111,8 @@ inline float PBDPackedSolver::s_coor(float rl) {
 }
 
 void PBDPackedSolver::step() {
+
+    auto startAll = std::chrono::steady_clock::now();
 
     //integration
     for (int i = 0; i < mNumParticles; i++) {
@@ -147,8 +152,14 @@ void PBDPackedSolver::step() {
                                 }
                             }
                         }
-
-                        density += mParameters.mMass * mCubicKernel.W(0.0f);
+                        
+                        //density for others in the same cell
+                        /*for (int otherCurrentId : currentParticlesIndices) {
+                            glm::vec3 ij = mPositionsStar[currentId] - mPositionsStar[otherCurrentId];
+                            float len = glm::length(ij);
+                            density += mParameters.mMass * mCubicKernel.W(len);
+                        }*/
+                        //density += mParameters.mMass * mCubicKernel.W(0.0f);
 
                         float constraint_i = (density / mParameters.mRestDensity) - static_cast<float>(1);
                         float constraint_gradient_sum = static_cast<float>(0);
@@ -164,6 +175,7 @@ void PBDPackedSolver::step() {
                                     if (otherParticlesIndices.empty()) continue;
                                     
                                     for (int otherId : otherParticlesIndices) {
+                                        if (otherId == currentId) continue;
                                         glm::vec3 temp = mPositionsStar[currentId] - mPositionsStar[otherId];
                                         glm::vec3 neighbor_grad = -(mParameters.mMass / mParameters.mRestDensity) * mCubicKernel.WGrad(temp);
                                         CHECK_NAN_VEC(neighbor_grad);
@@ -175,6 +187,16 @@ void PBDPackedSolver::step() {
                                 }
                             }
                         }
+
+                        //self contribution? (same cell grad constraint)
+                        /*for (int otherCurrentId : currentParticlesIndices) {
+                            glm::vec3 temp = mPositionsStar[currentId] - mPositionsStar[otherCurrentId];
+                            glm::vec3 neighbor_grad = -(mParameters.mMass / mParameters.mRestDensity) * mCubicKernel.WGrad(temp);
+                            CHECK_NAN_VEC(neighbor_grad);
+                            //float len = glm::length(temp);
+                            constraint_gradient_sum += glm::dot(neighbor_grad, neighbor_grad);
+                            grad_current_p -= neighbor_grad;
+                        }*/
 
                         CHECK_NAN_VEC(grad_current_p);
                         constraint_gradient_sum += glm::dot(grad_current_p, grad_current_p);
@@ -212,6 +234,7 @@ void PBDPackedSolver::step() {
                                     if (otherParticlesIndices.empty()) continue;
                                     
                                     for (int otherId : otherParticlesIndices) {
+                                        if (otherId == currentId) continue;
                                         glm::vec3 ij = mPositionsStar[currentId] - mPositionsStar[otherId];
                                         CHECK_NAN_VEC(ij);
                                         float len = glm::length(ij);
@@ -224,9 +247,22 @@ void PBDPackedSolver::step() {
                             }
                         }
 
-                        mPressures[currentId] *= (1.0f / (mParameters.mRestDensity * mParameters.mMass));
+                        /*for (int otherCurrentId : currentParticlesIndices) {
                         
+                            glm::vec3 ij = mPositionsStar[currentId] - mPositionsStar[otherCurrentId];
+                            CHECK_NAN_VEC(ij);
+                            float len = glm::length(ij);
+                            glm::vec3 pressure = (mLambdas[currentId] + mLambdas[otherCurrentId] + s_coor(len)) * mCubicKernel.WGrad(ij);
+                            mPressures[currentId] += pressure;
+                            CHECK_NAN_VEC(mPressures[currentId]);
+
+                        }*/
+
+                        mPressures[currentId] *= (1.0f / (mParameters.mRestDensity * mParameters.mMass));
+
                     }
+
+                    
 
                 }
             }
@@ -242,12 +278,214 @@ void PBDPackedSolver::step() {
             dp += mParameters.mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, 0, 1), glm::vec3(0, 0, 0), mPositionsStar[i], mParameters.mParticleRadius);
             dp += mParameters.mBoundaryCollisionCoeff * solve_boundary_collision_constraint(glm::vec3(0, 0, -1), glm::vec3(0, 0, mParameters.mZ), mPositionsStar[i], mParameters.mParticleRadius);
             mPositionsStar[i] += dp;
+        } //end boundary correction
+
+    } //end substeps
+
+
+    //density and angular participation
+    for (int y = 1; y < mGridY-1; y++) {
+        for (int x = 1; x < mGridX-1; x++) {
+            for (int z = 1; z < mGridZ-1; z++) {
+                
+                int currentCellIndex = y * mGridX * mGridZ + x * mGridZ + z;
+                std::vector<int>& currentParticlesIndices = mUniformGrid[currentCellIndex];
+                if (currentParticlesIndices.empty()) continue;
+
+                for (int currentId : currentParticlesIndices) {
+                    
+                    mDensities[currentId] = 0.0f;
+                    for (int yy = y-1; yy <= y+1; yy++) {
+                        for (int xx = x-1; xx <= x+1; xx++) {
+                            for (int zz = z-1; zz <= z+1; zz++) {
+                                int neighborCellIndex = yy * mGridX * mGridZ + xx * mGridZ + zz;
+                                
+                                std::vector<int>& otherParticlesIndices = mUniformGrid[neighborCellIndex];
+                                if (otherParticlesIndices.empty()) continue;
+                                
+                                for (int otherId : otherParticlesIndices) {
+                                    glm::vec3 ij = mPositionsStar[currentId] - mPositionsStar[otherId];
+                                    float len = glm::length(ij);
+                                    mDensities[currentId] += mParameters.mMass * mCubicKernel.W(len) * inside_kernel(len);
+                                }
+
+                            }
+                        }
+                    }
+
+                    /*for (int otherCurrentId : currentParticlesIndices) {
+                        glm::vec3 ij = mPositionsStar[currentId] - mPositionsStar[otherCurrentId];
+                        float len = glm::length(ij);
+                        mDensities[currentId] += mParameters.mMass * mCubicKernel.W(len);
+                    }*/
+                    //mDensities[currentId] += mParameters.mMass * mCubicKernel.W(0.0f);
+
+                    mAngularVelocities[currentId] = {0, 0, 0};
+                    for (int yy = y-1; yy <= y+1; yy++) {
+                        for (int xx = x-1; xx <= x+1; xx++) {
+                            for (int zz = z-1; zz <= z+1; zz++) {
+                                int neighborCellIndex = yy * mGridX * mGridZ + xx * mGridZ + zz;
+                                
+                                std::vector<int>& otherParticlesIndices = mUniformGrid[neighborCellIndex];
+                                if (otherParticlesIndices.empty()) continue;
+                                
+                                for (int otherId : otherParticlesIndices) {
+                                    if (otherId == currentId) continue;
+                                    glm::vec3 ij = mPositionsStar[currentId] - mPositionsStar[otherId];
+                                    float len = glm::length(ij);
+                                    glm::vec3 vij = mVelocities[otherId] - mVelocities[currentId];
+                                    mAngularVelocities[currentId] += glm::cross(vij, mCubicKernel.WGrad(ij)) * (mParameters.mMass / mDensities[currentId]) * inside_kernel(len);
+                                }
+
+                            }
+                        }
+                    }
+
+                    /*for (int otherCurrentId : currentParticlesIndices) {
+                        glm::vec3 ij = mPositionsStar[currentId] - mPositionsStar[otherCurrentId];
+                        //float len = glm::length(ij);
+                        glm::vec3 vij = mVelocities[otherCurrentId] - mVelocities[currentId];
+                        mAngularVelocities[currentId] += glm::cross(vij, mCubicKernel.WGrad(ij)) * (mParameters.mMass / mDensities[currentId]);
+                    }*/
+
+
+                } //end for all current particle in cell
+
+            }
         }
-        
+    } //end loop for all i (density and angular participation)
 
+
+    //density and angular participation
+    for (int y = 1; y < mGridY-1; y++) {
+        for (int x = 1; x < mGridX-1; x++) {
+            for (int z = 1; z < mGridZ-1; z++) {
+                
+                int currentCellIndex = y * mGridX * mGridZ + x * mGridZ + z;
+                std::vector<int>& currentParticlesIndices = mUniformGrid[currentCellIndex];
+                if (currentParticlesIndices.empty()) continue;
+
+                for (int currentId : currentParticlesIndices) {
+                    
+                    glm::vec3 N = {0, 0, 0};
+                    for (int yy = y-1; yy <= y+1; yy++) {
+                        for (int xx = x-1; xx <= x+1; xx++) {
+                            for (int zz = z-1; zz <= z+1; zz++) {
+                                int neighborCellIndex = yy * mGridX * mGridZ + xx * mGridZ + zz;
+                                
+                                std::vector<int>& otherParticlesIndices = mUniformGrid[neighborCellIndex];
+                                if (otherParticlesIndices.empty()) continue;
+                                
+                                for (int otherId : otherParticlesIndices) {
+                                    if (otherId == currentId) continue;
+                                    glm::vec3 ij = mPositionsStar[currentId] - mPositionsStar[otherId];
+                                    float len = glm::length(ij);
+                                    N += mCubicKernel.WGrad(ij) * (mParameters.mMass / mDensities[currentId]) * glm::length(mAngularVelocities[otherId]) * inside_kernel(len);
+                                }
+
+                            }
+                        }
+                    }
+
+                    /*for (int otherCurrentId : currentParticlesIndices) {
+                        glm::vec3 ij = mPositionsStar[currentId] - mPositionsStar[otherCurrentId];
+                        float len = glm::length(ij);
+                        N += mCubicKernel.WGrad(ij) * (mParameters.mMass / mDensities[currentId]) * glm::length(mAngularVelocities[otherCurrentId]);
+                    }*/
+
+
+                    float NLength = glm::length(N);
+                    if (NLength > 0.0f) {
+                        N /= NLength;
+                        glm::vec3 vorticity = glm::cross(N, mAngularVelocities[currentId]) * mParameters.mEpsilonVorticity;
+                        mVelocities[currentId] += mParameters.mTimeStep * mParameters.mMass * vorticity; 
+                    }
+                    
+                    //xsph viscosity
+                    glm::vec3 viscosity = {0, 0, 0};
+                    for (int yy = y-1; yy <= y+1; yy++) {
+                        for (int xx = x-1; xx <= x+1; xx++) {
+                            for (int zz = z-1; zz <= z+1; zz++) {
+                                int neighborCellIndex = yy * mGridX * mGridZ + xx * mGridZ + zz;
+                                
+                                std::vector<int>& otherParticlesIndices = mUniformGrid[neighborCellIndex];
+                                if (otherParticlesIndices.empty()) continue;
+                                
+                                for (int otherId : otherParticlesIndices) {
+                                    if (otherId == currentId) continue;
+                                    glm::vec3 ij = mPositionsStar[currentId] - mPositionsStar[otherId];
+                                    glm::vec3 vij = mVelocities[otherId] - mVelocities[currentId];
+                                    float len = glm::length(ij);
+                                    if (mDensities[otherId] > 0.0f) {
+                                        viscosity += vij * (mParameters.mMass / mDensities[otherId]) * mCubicKernel.W(len) * inside_kernel(len);
+                                    }                                
+                                }
+
+                            }
+                        }
+                    }
+
+                    /*for (int otherCurrentId : currentParticlesIndices) {
+                        glm::vec3 ij = mPositionsStar[currentId] - mPositionsStar[otherCurrentId];
+                        float len = glm::length(ij);
+                        N += mCubicKernel.WGrad(ij) * (mParameters.mMass / mDensities[currentId]) * glm::length(mAngularVelocities[otherCurrentId]);
+                    }*/
+                    
+
+                    mVelocities[currentId] += viscosity * mParameters.mCXsph;
+                    mPositions[currentId] = mPositionsStar[currentId];
+                    
+                } //end for all current particle in cell
+
+            }
+        }
+    } //end loop for all i ()
+
+    auto endAll = std::chrono::steady_clock::now();
+    mSolverFullMs = std::chrono::duration<double, std::milli> (endAll - startAll).count();
+    mSolverMs = mSolverFullMs - mNeighborMs;
+
+}
+
+void PBDPackedSolver::reset() {
+    printf("reset of packed solver\n");
+    PBDSolver::reset();
+
+    mPositionsStar = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
+    mLambdas = std::vector<float>(mNumParticles, static_cast<float>(0));
+    mPressures = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
+    mDensities = std::vector<float>(mNumParticles, static_cast<float>(0));
+    mAngularVelocities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
+    mParallelViscosities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
+
+    mCellSize = mParameters.mKernelRadius * 0.5f;
+
+    mGridX = static_cast<int>(std::ceil(mParameters.mX / mCellSize)) + 2;
+    mGridY = static_cast<int>(std::ceil(mParameters.mY / mCellSize)) + 2;
+    mGridZ = static_cast<int>(std::ceil(mParameters.mZ / mCellSize)) + 2;
+    
+    mNumGridCells = mGridX * mGridY * mGridZ;
+    int approximateMaxNeighbors = std::pow(mCellSize / mParameters.mParticleDiameter, 3);
+    printf("approx. max neighbors %d\n", approximateMaxNeighbors);
+    mUniformGrid = std::vector<std::vector<int>>(mNumGridCells, std::vector<int>(approximateMaxNeighbors));
+    for (auto& v : mUniformGrid) v.clear();
+
+}
+
+bool PBDPackedSolver::imgui() {
+    bool quit = PBDSolver::imgui();
+    ImGui::BeginTabBar("Verlet solver");
+    if (ImGui::BeginTabItem("Parameters")) {
+        ImGui::Text("%d particles %lf ms", mNumParticles, mSolverMs);
+        ImGui::Text("%d cells %lf ms", mNumGridCells, mNeighborMs);
+        ImGui::Text("simulation (everything) %lf ms (%lf fps)", mSolverFullMs, (1.0 / mSolverFullMs) * 1000.0);
+        if (ImGui::Button("save state")) {
+            writeParticlesToJson(ELOY_BUILD_DIRECTORY"/save.json");
+        }
     }
-
-
+    ImGui::EndTabItem();
+    ImGui::EndTabBar();
+    return quit;
 }
 
 
