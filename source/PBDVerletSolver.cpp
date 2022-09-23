@@ -104,7 +104,27 @@ PBDVerletSolver::PBDVerletSolver(const PBDSolverParameters& parameters): PBDSolv
 }
 
 void PBDVerletSolver::reset() {
-    
+    printf("reset of verlet solver\n");
+    PBDSolver::reset();
+    mPositionsStar = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
+    mLambdas = std::vector<float>(mNumParticles, static_cast<float>(0));
+    mPressures = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
+    mDensities = std::vector<float>(mNumParticles, static_cast<float>(0));
+    mAngularVelocities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
+    mParallelViscosities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
+
+    mNeighbors = std::vector<std::vector<int>>(mNumParticles, std::vector<int>{});
+
+    //draw the cells on paper you see that the radius is 1.5 cell length. Do the equation then
+    mCellSize = mParameters.mKernelRadius * 0.5f; //(2.0f / 3.0f);
+
+    mGridX = static_cast<float>(mParameters.mX / mCellSize) + 1;
+    mGridY = static_cast<float>(mParameters.mY / mCellSize) + 1;
+    mGridZ = static_cast<float>(mParameters.mZ / mCellSize) + 1;
+
+    mNumGridCells = mGridX * mGridY * mGridZ;
+    mUniformGrid = std::vector<std::vector<int>>(mNumGridCells, std::vector<int>{});
+
 }
 
 #define CHECK_NAN_VEC(V) \
@@ -463,16 +483,23 @@ void PBDVerletSolver::stepBasisSingleThreaded() {
             glm::vec3 vorticity = glm::cross(N, mAngularVelocities[i]) * mParameters.mEpsilonVorticity;
             mVelocities[i] += mParameters.mTimeStep * mParameters.mMass * vorticity; 
         }
+    }
 
+    std::vector<glm::vec3> viscosities(mNumParticles, {0, 0, 0}); 
+    for (int i = 0; i < mNumParticles; i++) {
         //xsph viscosity
-        glm::vec3 viscosity = {0, 0, 0};
+        //glm::vec3 viscosity = {0, 0, 0};
         for (int j = 0; j < mNeighbors[i].size(); j++) {
             glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
             glm::vec3 vij = mVelocities[mNeighbors[i][j]] - mVelocities[i];
             if (mDensities[mNeighbors[i][j]] > 0.0f)
-                viscosity += vij * (mParameters.mMass / mDensities[mNeighbors[i][j]]) * mCubicKernel.W(glm::length(ij));
+                viscosities[i] += vij * (mParameters.mMass / mDensities[mNeighbors[i][j]]) * mCubicKernel.W(glm::length(ij));
         }
-        mVelocities[i] += viscosity * mParameters.mCXsph;
+        
+    }
+
+    for (int i = 0; i < mNumParticles; i++) {
+        mVelocities[i] += viscosities[i] * mParameters.mCXsph;
         mPositions[i] = mPositionsStar[i];
     }
 
