@@ -40,8 +40,8 @@ class IParticlesData;
 //worked well with the sim with the pressure uncorrected
 class PBDSolverParameters {
 public:
-    int mX = 6, mY = 15, mZ = 6;
-    float mParticleRadius          = static_cast<float>(0.1);
+    int mX = 6, mY = 10, mZ = 6;
+    float mParticleRadius           = static_cast<float>(0.1);
     float mKernelRadius             = static_cast<float>(0.32);
     float mKernelFactor             = static_cast<float>(1);
     float mBoundaryCollisionCoeff   = static_cast<float>(1.2);

@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
     //parameters.mParticuleRadius = 0.25f;
     glm::vec3 min_pos = {0.5, 0.5, 0.5};
     glm::vec3 max_pos = {5, 10, 5};
-    glm::vec3 offset = {3, 3, 3};
+    glm::vec3 offset = {3, 0, 3};
     Eloy::AABBParticlesData aabb1(min_pos + offset, max_pos + offset, {1, 0, 0, 1});
 
     parameters.mParticlesData.push_back(&aabb1);

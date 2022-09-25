@@ -36,7 +36,7 @@ private:
     //AABB mAABB;
     int selectedSolver = 1;
     int selectedNeighbor = 0;
-
+    float mScorrThreshold = 0.001f;
     
     std::vector<glm::vec3> mPositionsStar;
     std::vector<float> mDensities;

@@ -110,7 +110,7 @@ inline float PBDPackedSolver::inside_kernel_2(float distance2) {
 inline float PBDPackedSolver::s_coor(float rl) {
     float result = static_cast<float>(0);
     float W = mCubicKernel.W(mParameters.mSCorrDeltaQ);
-    if (W > 0.001f) { //glm::epsilon<float>()
+    if (W > 0.000f) { //was 0.001f before 25.09.22
         result = -mParameters.mSCorrK * std::pow(mCubicKernel.W(rl) / W, mParameters.mSCorrN);
     }
     CHECK_NAN_VAL(result);
@@ -422,6 +422,9 @@ void PBDPackedSolver::step() {
 
                 for (int currentId : currentParticlesIndices) {
                     
+                    //WARNING: missing update of velocity here
+                    mVelocities[currentId] = (mPositionsStar[currentId] - mPositions[currentId]) / mParameters.mTimeStep;
+
                     glm::vec3 N = {0, 0, 0};
                     for (int yy = yLower; yy <= yUpper; yy++) {
                         for (int xx = xLower; xx <= xUpper; xx++) {

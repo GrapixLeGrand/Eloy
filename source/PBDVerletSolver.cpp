@@ -140,7 +140,7 @@ void PBDVerletSolver::reset() {
 inline float PBDVerletSolver::s_coor(float rl) {
     float result = static_cast<float>(0);
     float W = mCubicKernel.W(mParameters.mSCorrDeltaQ);
-    if (W > 0.001f) { //glm::epsilon<float>()
+    if (W > mScorrThreshold) { //glm::epsilon<float>()
         result = -mParameters.mSCorrK * std::pow(mCubicKernel.W(rl) / W, mParameters.mSCorrN);
     }
     CHECK_NAN_VAL(result);
@@ -276,7 +276,7 @@ void PBDVerletSolver::stepBasisMultiThreaded() {
             for (int j = 0; j < mNeighbors[i].size(); j++) {
                 glm::vec3 ij = mPositionsStar[i] - mPositionsStar[mNeighbors[i][j]];
                 CHECK_NAN_VEC(ij);
-                mPressures[i] += (mLambdas[i] + mLambdas[j] + s_coor(glm::length(ij))) * mCubicKernel.WGrad(ij); //
+                mPressures[i] += (mLambdas[i] + mLambdas[mNeighbors[i][j]] + s_coor(glm::length(ij))) * mCubicKernel.WGrad(ij); //
                 CHECK_NAN_VEC(mPressures[i]);
             }
 
@@ -701,6 +701,8 @@ bool PBDVerletSolver::imgui() {
         ImGui::Text("%d cells %lf ms", mNumGridCells, mNeighborMs);
         ImGui::Text("simulation (everything) %lf ms (%lf fps)", mSolverFullMs, (1.0 / mSolverFullMs) * 1000.0);
 
+        ImGui::SliderFloat("scorrThreshold", &mScorrThreshold, 0.00000001f, 0.01f, "%.3f");
+        
         static const char* solverTypes[]{"single-thread", "multi-threaded"}; 
         ImGui::Combo("solver", &selectedSolver, solverTypes, IM_ARRAYSIZE(solverTypes));
         mSolverMode = (PBDVerletSolver::SolverMode) selectedSolver;
