@@ -55,7 +55,7 @@ PBDVerletSolver::PBDVerletSolver(const PBDSolverParameters& parameters): PBDSolv
     mNeighbors = std::vector<std::vector<int>>(mNumParticles, std::vector<int>{});
 
     //draw the cells on paper you see that the radius is 1.5 cell length. Do the equation then
-    mCellSize = mParameters.mKernelRadius * 0.5f; //(2.0f / 3.0f);
+    mCellSize = mParameters.mKernelRadius * 0.5f;//* 0.5f; //(2.0f / 3.0f);
 
     mGridX = static_cast<float>(mParameters.mX / mCellSize) + 1;
     mGridY = static_cast<float>(mParameters.mY / mCellSize) + 1;

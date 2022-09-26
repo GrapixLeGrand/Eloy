@@ -52,6 +52,8 @@ int main(int argc, char** argv) {
     //mainFb.addColorAttachment(&sceneResult, 0);
     mainFb.addAttachment(&sceneDepthStencil, Levek::FrameBufferProperties::AttachementType::DEPTH);
 
+    int selectedSolver = 1;
+    Eloy::PBDSolver* solvers[2] = { &verletSolver, &packedSolver };
 
     while (!windowController->exit() && !inputController->isKeyPressed(Levek::LEVEK_KEY_Q)) {
         renderer->clear();
@@ -93,11 +95,17 @@ int main(int argc, char** argv) {
         fps += " fps";
         ImGui::Text(fps.c_str());
 
+        static const char* solverTypes[]{"verlet", "packed"};
+        int saveSelectedSolver = selectedSolver;
+        ImGui::Combo("solver", &selectedSolver, solverTypes, IM_ARRAYSIZE(solverTypes));
+
         if (solver->imgui()) {
             solver->reset();
-            //particleEngine.getParameters();
-            //particleEngine = Eloy::PBDVerletSolver(parameters);
-            //engineImGui = Eloy::EngineImGui(particleEngine);
+        }
+
+        if (saveSelectedSolver != selectedSolver) {
+            solver = solvers[selectedSolver];
+            solver->reset();
         }
 
         ImGui::End();

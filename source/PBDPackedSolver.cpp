@@ -16,9 +16,9 @@ PBDPackedSolver::PBDPackedSolver(const PBDSolverParameters& parameters): PBDSolv
 
     mCellSize = mParameters.mKernelRadius * 0.5f; //* 0.5f; //(2.0f / 3.0f);
 
-    mGridX = static_cast<int>(std::ceil(mParameters.mX / mCellSize));// + 2;
-    mGridY = static_cast<int>(std::ceil(mParameters.mY / mCellSize));// + 2;
-    mGridZ = static_cast<int>(std::ceil(mParameters.mZ / mCellSize));// + 2;
+    mGridX = static_cast<int>(std::ceil(mParameters.mX / mCellSize)) + 2;
+    mGridY = static_cast<int>(std::ceil(mParameters.mY / mCellSize)) + 2;
+    mGridZ = static_cast<int>(std::ceil(mParameters.mZ / mCellSize)) + 2;
     
     printf("grid x %d, mX %lf, cell size %lf\n", mGridX, (double) mParameters.mX, (double) mCellSize);
 
