@@ -34,17 +34,18 @@ PBDPackedSolver::PBDPackedSolver(const PBDSolverParameters& parameters): PBDSolv
 inline int PBDPackedSolver::get_cell_id(glm::vec3 position) {
     //position = glm::clamp(position, glm::vec3(simulation->mCellSize * 0.5f), glm::vec3(simulation->domainX - simulation->mCellSize * 0.5f, simulation->domainY - simulation->mCellSize * 0.5f, simulation->domainZ - simulation->mCellSize * 0.5f));
     //CHECK_NAN_VEC(position);
-    /*position /= mCellSize;
-    int x = glm::clamp(static_cast<int>(position.x), 0, mGridX-1);// + 1;
-    int y = glm::clamp(static_cast<int>(position.y), 0, mGridY-1);// + 1;
-    int z = glm::clamp(static_cast<int>(position.z), 0, mGridZ-1);// + 1;
+    position /= mCellSize;
+    int x = glm::clamp(static_cast<int>(position.x), 1, mGridX-2);// + 1;
+    int y = glm::clamp(static_cast<int>(position.y), 1, mGridY-2);// + 1;
+    int z = glm::clamp(static_cast<int>(position.z), 1, mGridZ-2);// + 1;
 
     int cell_id =
             y * mGridX * mGridZ +
             x * mGridZ +
             z;
     //cell_id = glm::clamp(cell_id, 0, mNumGridCells - 1);
-    return cell_id;*/
+    return cell_id;
+    /*
     position /= mCellSize;
     int cell_id =
             (static_cast<int>(position.y)) * mGridX * mGridZ +
@@ -52,6 +53,7 @@ inline int PBDPackedSolver::get_cell_id(glm::vec3 position) {
             (static_cast<int>(position.z));
     cell_id = glm::clamp(cell_id, 0, mNumGridCells - 1);
     return cell_id;
+    */
 }
 
 //Taken from Lustrine on github
@@ -110,9 +112,9 @@ inline float PBDPackedSolver::inside_kernel_2(float distance2) {
 inline float PBDPackedSolver::s_coor(float rl) {
     float result = static_cast<float>(0);
     float W = mCubicKernel.W(mParameters.mSCorrDeltaQ);
-    if (W > 0.000f) { //was 0.001f before 25.09.22
+    //if (W > 0.000f) { //was 0.001f before 25.09.22
         result = -mParameters.mSCorrK * std::pow(mCubicKernel.W(rl) / W, mParameters.mSCorrN);
-    }
+    //}
     CHECK_NAN_VAL(result);
     return result;
 }
@@ -131,32 +133,20 @@ void PBDPackedSolver::step() {
 
     for (int s = 0; s < mParameters.mSubsteps; s++) {
 
-        for (int y = 0; y < mGridY; y++) {
-            for (int x = 0; x < mGridX; x++) {
-                for (int z = 0; z < mGridZ; z++) {
+        for (int y = 1; y < mGridY-1; y++) {
+            for (int x = 1; x < mGridX-1; x++) {
+                for (int z = 1; z < mGridZ-1; z++) {
                     
                     int currentCellIndex = y * mGridX * mGridZ + x * mGridZ + z;
                     std::vector<int>& currentParticlesIndices = mUniformGrid[currentCellIndex];
                     if (currentParticlesIndices.empty()) continue;
 
-                    int yLower = y - 1; int yUpper = y + 1;
-                    int xLower = x - 1; int xUpper = x + 1;
-                    int zLower = z - 1; int zUpper = z + 1;
-
-                    yLower = (yLower >= 0) ? yLower : 0; 
-                    xLower = (xLower >= 0) ? xLower : 0;
-                    zLower = (zLower >= 0) ? zLower : 0;
-
-                    yUpper = (yUpper >= mGridY) ? mGridY - 1 : yUpper;
-                    xUpper = (xUpper >= mGridX) ? mGridX - 1 : xUpper;
-                    zUpper = (zUpper >= mGridZ) ? mGridZ - 1 : zUpper;
-
                     for (int currentId : currentParticlesIndices) {
                         
                         float density = 0.0;
-                        for (int yy = yLower; yy <= yUpper; yy++) {
-                            for (int xx = xLower; xx <= xUpper; xx++) {
-                                for (int zz = zLower; zz <= zUpper; zz++) {
+                        for (int yy = y-1; yy <= y+1; yy++) {
+                            for (int xx = x-1; xx <= x+1; xx++) {
+                                for (int zz = z-1; zz <= z+1; zz++) {
                                     int neighborCellIndex = yy * mGridX * mGridZ + xx * mGridZ + zz;
                                     
                                     std::vector<int>& otherParticlesIndices = mUniformGrid[neighborCellIndex];
@@ -185,9 +175,9 @@ void PBDPackedSolver::step() {
                         glm::vec3 grad_current_p = glm::vec3(0.0);
 
 
-                        for (int yy = yLower; yy <= yUpper; yy++) {
-                            for (int xx = xLower; xx <= xUpper; xx++) {
-                                for (int zz = zLower; zz <= zUpper; zz++) {
+                        for (int yy = y-1; yy <= y+1; yy++) {
+                            for (int xx = x-1; xx <= x+1; xx++) {
+                                for (int zz = z-1; zz <= z+1; zz++) {
                                     int neighborCellIndex = yy * mGridX * mGridZ + xx * mGridZ + zz;
                                     
                                     std::vector<int>& otherParticlesIndices = mUniformGrid[neighborCellIndex];
@@ -233,32 +223,20 @@ void PBDPackedSolver::step() {
         } //end loop for all i
 
 
-        for (int y = 0; y < mGridY; y++) {
-            for (int x = 0; x < mGridX; x++) {
-                for (int z = 0; z < mGridZ; z++) {
+        for (int y = 1; y < mGridY-1; y++) {
+            for (int x = 1; x < mGridX-1; x++) {
+                for (int z = 1; z < mGridZ-1; z++) {
                     
                     int currentCellIndex = y * mGridX * mGridZ + x * mGridZ + z;
                     std::vector<int>& currentParticlesIndices = mUniformGrid[currentCellIndex];
                     if (currentParticlesIndices.empty()) continue;
 
-                    int yLower = y - 1; int yUpper = y + 1;
-                    int xLower = x - 1; int xUpper = x + 1;
-                    int zLower = z - 1; int zUpper = z + 1;
-
-                    yLower = (yLower >= 0) ? yLower : 0; 
-                    xLower = (xLower >= 0) ? xLower : 0;
-                    zLower = (zLower >= 0) ? zLower : 0;
-
-                    yUpper = (yUpper >= mGridY) ? mGridY - 1 : yUpper;
-                    xUpper = (xUpper >= mGridX) ? mGridX - 1 : xUpper;
-                    zUpper = (zUpper >= mGridZ) ? mGridZ - 1 : zUpper;
-
                     for (int currentId : currentParticlesIndices) {
                         
                         mPressures[currentId] = glm::vec3(0);
-                        for (int yy = yLower; yy <= yUpper; yy++) {
-                            for (int xx = xLower; xx <= xUpper; xx++) {
-                                for (int zz = zLower; zz <= zUpper; zz++) {
+                        for (int yy = y-1; yy <= y+1; yy++) {
+                            for (int xx = x-1; xx <= x+1; xx++) {
+                                for (int zz = z-1; zz <= z+1; zz++) {
                                     int neighborCellIndex = yy * mGridX * mGridZ + xx * mGridZ + zz;
                                     
                                     std::vector<int>& otherParticlesIndices = mUniformGrid[neighborCellIndex];
@@ -315,32 +293,20 @@ void PBDPackedSolver::step() {
 
 
     //density and angular participation
-    for (int y = 0; y < mGridY; y++) {
-        for (int x = 0; x < mGridX; x++) {
-            for (int z = 0; z < mGridZ; z++) {
+    for (int y = 1; y < mGridY-1; y++) {
+        for (int x = 1; x < mGridX-1; x++) {
+            for (int z = 1; z < mGridZ-1; z++) {
                 
                 int currentCellIndex = y * mGridX * mGridZ + x * mGridZ + z;
                 std::vector<int>& currentParticlesIndices = mUniformGrid[currentCellIndex];
                 if (currentParticlesIndices.empty()) continue;
-                
-                int yLower = y - 1; int yUpper = y + 1;
-                int xLower = x - 1; int xUpper = x + 1;
-                int zLower = z - 1; int zUpper = z + 1;
-
-                yLower = (yLower >= 0) ? yLower : 0; 
-                xLower = (xLower >= 0) ? xLower : 0;
-                zLower = (zLower >= 0) ? zLower : 0;
-
-                yUpper = (yUpper >= mGridY) ? mGridY - 1 : yUpper;
-                xUpper = (xUpper >= mGridX) ? mGridX - 1 : xUpper;
-                zUpper = (zUpper >= mGridZ) ? mGridZ - 1 : zUpper;
 
                 for (int currentId : currentParticlesIndices) {
                     
                     mDensities[currentId] = 0.0f;
-                    for (int yy = yLower; yy <= yUpper; yy++) {
-                        for (int xx = xLower; xx <= xUpper; xx++) {
-                            for (int zz = zLower; zz <= zUpper; zz++) {
+                    for (int yy = y-1; yy <= y+1; yy++) {
+                        for (int xx = x-1; xx <= x+1; xx++) {
+                            for (int zz = z-1; zz <= z+1; zz++) {
                                 int neighborCellIndex = yy * mGridX * mGridZ + xx * mGridZ + zz;
                                 
                                 std::vector<int>& otherParticlesIndices = mUniformGrid[neighborCellIndex];
@@ -364,9 +330,9 @@ void PBDPackedSolver::step() {
                     //mDensities[currentId] += mParameters.mMass * mCubicKernel.W(0.0f);
 
                     mAngularVelocities[currentId] = {0, 0, 0};
-                    for (int yy = yLower; yy <= yUpper; yy++) {
-                        for (int xx = xLower; xx <= xUpper; xx++) {
-                            for (int zz = zLower; zz <= zUpper; zz++) {
+                    for (int yy = y-1; yy <= y+1; yy++) {
+                        for (int xx = x-1; xx <= x+1; xx++) {
+                            for (int zz = z-1; zz <= z+1; zz++) {
                                 int neighborCellIndex = yy * mGridX * mGridZ + xx * mGridZ + zz;
                                 
                                 std::vector<int>& otherParticlesIndices = mUniformGrid[neighborCellIndex];
@@ -400,25 +366,13 @@ void PBDPackedSolver::step() {
 
 
     //density and angular participation
-    for (int y = 0; y < mGridY; y++) {
-        for (int x = 0; x < mGridX; x++) {
-            for (int z = 0; z < mGridZ; z++) {
+    for (int y = 1; y < mGridY-1; y++) {
+        for (int x = 1; x < mGridX-1; x++) {
+            for (int z = 1; z < mGridZ-1; z++) {
                 
                 int currentCellIndex = y * mGridX * mGridZ + x * mGridZ + z;
                 std::vector<int>& currentParticlesIndices = mUniformGrid[currentCellIndex];
                 if (currentParticlesIndices.empty()) continue;
-
-                int yLower = y - 1; int yUpper = y + 1;
-                int xLower = x - 1; int xUpper = x + 1;
-                int zLower = z - 1; int zUpper = z + 1;
-
-                yLower = (yLower >= 0) ? yLower : 0; 
-                xLower = (xLower >= 0) ? xLower : 0;
-                zLower = (zLower >= 0) ? zLower : 0;
-
-                yUpper = (yUpper >= mGridY) ? mGridY - 1 : yUpper;
-                xUpper = (xUpper >= mGridX) ? mGridX - 1 : xUpper;
-                zUpper = (zUpper >= mGridZ) ? mGridZ - 1 : zUpper;
 
                 for (int currentId : currentParticlesIndices) {
                     
@@ -426,9 +380,9 @@ void PBDPackedSolver::step() {
                     mVelocities[currentId] = (mPositionsStar[currentId] - mPositions[currentId]) / mParameters.mTimeStep;
 
                     glm::vec3 N = {0, 0, 0};
-                    for (int yy = yLower; yy <= yUpper; yy++) {
-                        for (int xx = xLower; xx <= xUpper; xx++) {
-                            for (int zz = zLower; zz <= zUpper; zz++) {
+                    for (int yy = y-1; yy <= y+1; yy++) {
+                        for (int xx = x-1; xx <= x+1; xx++) {
+                            for (int zz = z-1; zz <= z+1; zz++) {
                                 int neighborCellIndex = yy * mGridX * mGridZ + xx * mGridZ + zz;
                                 
                                 std::vector<int>& otherParticlesIndices = mUniformGrid[neighborCellIndex];
@@ -466,33 +420,21 @@ void PBDPackedSolver::step() {
     } //end loop for all i ()
 
     std::vector<glm::vec3> viscosities(mNumParticles, {0, 0, 0});
-    for (int y = 0; y < mGridY; y++) {
-        for (int x = 0; x < mGridX; x++) {
-            for (int z = 0; z < mGridZ; z++) { 
+    for (int y = 1; y < mGridY-1; y++) {
+        for (int x = 1; x < mGridX-1; x++) {
+            for (int z = 1; z < mGridZ-1; z++) {
                 
                 int currentCellIndex = y * mGridX * mGridZ + x * mGridZ + z;
                 std::vector<int>& currentParticlesIndices = mUniformGrid[currentCellIndex];
                 if (currentParticlesIndices.empty()) continue;
 
-                int yLower = y - 1; int yUpper = y + 1;
-                int xLower = x - 1; int xUpper = x + 1;
-                int zLower = z - 1; int zUpper = z + 1;
-
-                yLower = (yLower >= 0) ? yLower : 0; 
-                xLower = (xLower >= 0) ? xLower : 0;
-                zLower = (zLower >= 0) ? zLower : 0;
-
-                yUpper = (yUpper >= mGridY) ? mGridY - 1 : yUpper;
-                xUpper = (xUpper >= mGridX) ? mGridX - 1 : xUpper;
-                zUpper = (zUpper >= mGridZ) ? mGridZ - 1 : zUpper;
-
                 for (int currentId : currentParticlesIndices) {
 
                     //xsph viscosity
                     //glm::vec3 viscosity = {0, 0, 0};
-                    for (int yy = yLower; yy <= yUpper; yy++) {
-                        for (int xx = xLower; xx <= xUpper; xx++) {
-                            for (int zz = zLower; zz <= zUpper; zz++) {
+                    for (int yy = y-1; yy <= y+1; yy++) {
+                        for (int xx = x-1; xx <= x+1; xx++) {
+                            for (int zz = z-1; zz <= z+1; zz++) {
                                 int neighborCellIndex = yy * mGridX * mGridZ + xx * mGridZ + zz;
                                 
                                 std::vector<int>& otherParticlesIndices = mUniformGrid[neighborCellIndex];
