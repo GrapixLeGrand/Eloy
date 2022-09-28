@@ -40,6 +40,37 @@ class IParticlesData;
 //worked well with the sim with the pressure uncorrected
 class PBDSolverParameters {
 public:
+    int mX = 3, mY = 3, mZ = 3;
+    float mParticleRadius           = static_cast<float>(0.03);
+    float mKernelRadius             = static_cast<float>(0.11);
+    float mKernelFactor             = static_cast<float>(1);
+    float mBoundaryCollisionCoeff   = static_cast<float>(1.2);
+    float mRestDensity              = static_cast<float>(6378.0);
+    float mMass                     = static_cast<float>(1);
+    float mTimeStep                 = static_cast<float>(0.0083);
+    glm::vec3 mGravity              = glm::vec3(0, -10.0, 0.0);
+    float mRelaxationEpsilon        = static_cast<float>(600);
+    float mSCorrDeltaQ              = static_cast<float>(0.032); //was 0.3 * 0.1
+    float mSCorrK                   = static_cast<float>(0.0001);
+    float mSCorrN                   = static_cast<float>(4);//1.57
+    float mCXsph                    = static_cast<float>(0.01);
+    float mEpsilonVorticity         = static_cast<float>(0.0);
+    int mSubsteps                   = 2;
+
+    std::vector<IParticlesData*> mParticlesData;
+    PBDSolverParameters(): mParticleDiameter(2.0f * mParticleRadius) {
+        //mKernelRadius = 1.5f * mParticleRadius;
+    }
+    float getDiameter() { return mParticleDiameter; }
+private:
+    friend class PBDPackedSolver;
+    float mParticleDiameter = static_cast<float>(0);
+    
+};
+
+/*
+class PBDSolverParameters {
+public:
     int mX = 6, mY = 10, mZ = 6;
     float mParticleRadius           = static_cast<float>(0.1);
     float mKernelRadius             = static_cast<float>(0.32);
@@ -67,6 +98,7 @@ private:
     float mParticleDiameter = static_cast<float>(0);
     
 };
+*/
 
 /*
 class EngineParameters {

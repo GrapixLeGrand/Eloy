@@ -14,7 +14,7 @@ PBDPackedSolver::PBDPackedSolver(const PBDSolverParameters& parameters): PBDSolv
     mAngularVelocities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
     mParallelViscosities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
 
-    mCellSize = mParameters.mKernelRadius * 0.5f; //* 0.5f; //(2.0f / 3.0f);
+    mCellSize = mParameters.mKernelRadius; //* 0.5f; //(2.0f / 3.0f);
 
     mGridX = static_cast<int>(std::ceil(mParameters.mX / mCellSize)) + 2;
     mGridY = static_cast<int>(std::ceil(mParameters.mY / mCellSize)) + 2;
@@ -24,8 +24,9 @@ PBDPackedSolver::PBDPackedSolver(const PBDSolverParameters& parameters): PBDSolv
 
     mNumGridCells = mGridX * mGridY * mGridZ;
     int approximateMaxNeighbors = std::pow(mCellSize / mParameters.mParticleDiameter, 3);
-    printf("approx. max neighbors %d\n", approximateMaxNeighbors);
-    printf("approx. max neighbors f %f\n", mCellSize / mParameters.mParticleDiameter);
+    double approx = std::pow(mParameters.mKernelRadius, 3) / std::pow(mParameters.mParticleDiameter, 3);
+    printf("approx. max neighbors (as box) %lf\n", approx);
+    //printf("approx. max neighbors f %f\n", mCellSize / mParameters.mParticleDiameter);
     mUniformGrid = std::vector<std::vector<int>>(mNumGridCells, std::vector<int>(approximateMaxNeighbors));
     for (auto& v : mUniformGrid) v.clear();
     
@@ -81,6 +82,16 @@ void PBDPackedSolver::findNeighbors() {
         assert(cell_id >= 0 && cell_id < mNumGridCells && "index must be in range");
         mUniformGrid[cell_id].push_back(i);
     }
+
+    double numNeighbor = 0.0;
+    int numTaken = 0;
+    for (auto& v : mUniformGrid) {
+        if (v.size() > 0) {
+            numNeighbor += v.size();
+            numTaken++;
+        }
+    }
+    printf("%d cells taken with %lf avg particles\n", numTaken, numNeighbor / numTaken);
 
     auto endNeigbors = std::chrono::steady_clock::now();
     mNeighborMs = std::chrono::duration<double, std::milli> (endNeigbors - startNeigbors).count();
@@ -483,7 +494,7 @@ void PBDPackedSolver::reset() {
     mAngularVelocities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
     mParallelViscosities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
 
-    mCellSize = mParameters.mKernelRadius * 0.5f;
+    mCellSize = mParameters.mKernelRadius;
 
     mGridX = static_cast<int>(std::ceil(mParameters.mX / mCellSize)) + 2;
     mGridY = static_cast<int>(std::ceil(mParameters.mY / mCellSize)) + 2;
