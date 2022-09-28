@@ -18,10 +18,10 @@ int main(int argc, char** argv) {
 
     Levek::ArcballCamera camera;
     camera.setProjection(glm::perspective(glm::radians(45.0f), (resolutionX * 1.0f) / (1.0f * resolutionY), 0.01f, 1000.0f));
-    camera.setRotation(5.34f);
-    camera.setElevation(-0.59f);
+    camera.setRotation(4.14f);
+    camera.setElevation(-0.18f);
     camera.setTarget({9.260883f, 0.000000f, 5.517349f});
-    camera.setViewDistance(35.0f);
+    camera.setViewDistance(15.0f);
 
     Levek::SkyBoxPipelineState skybox;
     Levek::GroundPipelineState ground(modelLoader, 150.0f, false);

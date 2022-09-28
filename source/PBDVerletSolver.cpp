@@ -4,6 +4,7 @@
 #include "profiling/tsc_x86.hpp"
 #include "nlohmann/json.hpp"
 #include "omp.h"
+#include "SolverUtils.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -57,9 +58,9 @@ PBDVerletSolver::PBDVerletSolver(const PBDSolverParameters& parameters): PBDSolv
     //draw the cells on paper you see that the radius is 1.5 cell length. Do the equation then
     mCellSize = mParameters.mKernelRadius * 0.5f;//* 0.5f; //(2.0f / 3.0f);
 
-    mGridX = static_cast<float>(mParameters.mX / mCellSize) + 1;
-    mGridY = static_cast<float>(mParameters.mY / mCellSize) + 1;
-    mGridZ = static_cast<float>(mParameters.mZ / mCellSize) + 1;
+    mGridX = static_cast<int>(std::ceil(mParameters.mX / mCellSize)) + (mNeighborMode == NeighborMode::VERLET_GHOST ? 1 : 0) * 2;
+    mGridY = static_cast<int>(std::ceil(mParameters.mY / mCellSize)) + (mNeighborMode == NeighborMode::VERLET_GHOST ? 1 : 0) * 2;
+    mGridZ = static_cast<int>(std::ceil(mParameters.mZ / mCellSize)) + (mNeighborMode == NeighborMode::VERLET_GHOST ? 1 : 0) * 2;
 
     mNumGridCells = mGridX * mGridY * mGridZ;
     mUniformGrid = std::vector<std::vector<int>>(mNumGridCells, std::vector<int>{});
@@ -113,17 +114,62 @@ void PBDVerletSolver::reset() {
     mAngularVelocities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
     mParallelViscosities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
 
+    mPositionsStarTemp = mPositionsStar;
+    mPositionsTemp = mPositions;
+    mVelocitiesTemp = mVelocitiesTemp;
+
+    mNeighborSortedIndices = std::vector<int>(mNumParticles, 0);
+    mNeighborUnsortedIndices = std::vector<int>(mNumParticles, 0);
+
     mNeighbors = std::vector<std::vector<int>>(mNumParticles, std::vector<int>{});
 
     //draw the cells on paper you see that the radius is 1.5 cell length. Do the equation then
     mCellSize = mParameters.mKernelRadius * 0.5f; //(2.0f / 3.0f);
 
-    mGridX = static_cast<float>(mParameters.mX / mCellSize) + 1;
-    mGridY = static_cast<float>(mParameters.mY / mCellSize) + 1;
-    mGridZ = static_cast<float>(mParameters.mZ / mCellSize) + 1;
+    mGridX = static_cast<int>(std::ceil(mParameters.mX / mCellSize)) + (mNeighborMode == NeighborMode::VERLET_GHOST ? 1 : 0) * 2;
+    mGridY = static_cast<int>(std::ceil(mParameters.mY / mCellSize)) + (mNeighborMode == NeighborMode::VERLET_GHOST ? 1 : 0) * 2;
+    mGridZ = static_cast<int>(std::ceil(mParameters.mZ / mCellSize)) + (mNeighborMode == NeighborMode::VERLET_GHOST ? 1 : 0) * 2;
+
 
     mNumGridCells = mGridX * mGridY * mGridZ;
     mUniformGrid = std::vector<std::vector<int>>(mNumGridCells, std::vector<int>{});
+
+    {//minimal strategy
+        mCellsUsedStorage.reserve(mNumGridCells);
+        mCellsPrecomputedNeighbors = std::vector<std::vector<int>>(mNumGridCells, std::vector<int>{});
+        for (int y = 0; y < mGridY; y++) {
+            for (int x = 0; x < mGridX; x++) {
+                for (int z = 0; z < mGridZ; z++) {
+                    
+                    int index = y * mGridX * mGridZ + x * mGridZ + z;
+
+                    int yLower = y - 1; int yUpper = y + 1;
+                    int xLower = x - 1; int xUpper = x + 1;
+                    int zLower = z - 1; int zUpper = z + 1;
+
+                    yLower = (yLower >= 0) ? yLower : 0; 
+                    xLower = (xLower >= 0) ? xLower : 0;
+                    zLower = (zLower >= 0) ? zLower : 0;
+
+                    yUpper = (yUpper >= mGridY) ? mGridY - 1 : yUpper;
+                    xUpper = (xUpper >= mGridX) ? mGridX - 1 : xUpper;
+                    zUpper = (zUpper >= mGridZ) ? mGridZ - 1 : zUpper;
+
+                    for (int yy = yLower; yy <= yUpper; yy++) {
+                        for (int xx = xLower; xx <= xUpper; xx++) {
+                            for (int zz = zLower; zz <= zUpper; zz++) {
+                                int indexNeighbor = yy * mGridX * mGridZ + xx * mGridZ + zz;
+                                mCellsPrecomputedNeighbors[index].push_back(indexNeighbor);
+                            }
+                        }
+                    }
+
+
+                }
+            }
+        }
+
+    }
 
 }
 
@@ -179,9 +225,22 @@ inline glm::vec3 solve_boundary_collision_constraint(glm::vec3 n, glm::vec3 p0, 
 
 void PBDVerletSolver::findNeighbors() {
     auto startNeigbors = std::chrono::steady_clock::now();
+
+    if (mNeighborMode != mLastNeighborMode) {
+        printf("changing neighbor mode, reseting simulation\n");
+        mLastNeighborMode = mNeighborMode;
+        this->reset();
+    }
+
     switch (mNeighborMode) {
         case VERLET_BASIC:
             this->findNeighborsUniformGrid();
+        break;
+        case VERLET_SORTED:
+            this->findNeighborsUniformGridSorted();
+        break;
+        case VERLET_GHOST:
+            this->findNeighborsUniformGridGhost();
         break;
         case VERLET_MINIMAL:
             this->findNeighborsUniformGridMinimalStrategy();
@@ -507,12 +566,7 @@ void PBDVerletSolver::stepBasisSingleThreaded() {
     
 }
 
-/*
-void PBDVerletSolver::resize(size_t newSize) {
-    mPositions.resize(newSize);
-    mVelocities.resize(newSize);
-    mColors.resize(newSize);
-}*/
+
 
 inline int PBDVerletSolver::get_cell_id(glm::vec3 position) {
     //position = glm::clamp(position, glm::vec3(simulation->mCellSize * 0.5f), glm::vec3(simulation->domainX - simulation->mCellSize * 0.5f, simulation->domainY - simulation->mCellSize * 0.5f, simulation->domainZ - simulation->mCellSize * 0.5f));
@@ -526,8 +580,199 @@ inline int PBDVerletSolver::get_cell_id(glm::vec3 position) {
     return cell_id;
 }
 
+inline int PBDVerletSolver::get_cell_id_ghost(glm::vec3 position) {
+
+    position /= mCellSize;
+    int x = glm::clamp(static_cast<int>(position.x), 1, mGridX-2);// + 1;
+    int y = glm::clamp(static_cast<int>(position.y), 1, mGridY-2);// + 1;
+    int z = glm::clamp(static_cast<int>(position.z), 1, mGridZ-2);// + 1;
+
+    int cell_id =
+            y * mGridX * mGridZ +
+            x * mGridZ +
+            z;
+    //cell_id = glm::clamp(cell_id, 0, mNumGridCells - 1);
+    return cell_id;
+}
+
+
 inline bool PBDVerletSolver::check_index(int i, int min, int max) {
     return (i >= min && i < max);
+}
+
+
+void PBDVerletSolver::findNeighborsUniformGridSorted() {
+
+    for (int i = 0; i < mNumParticles; i++) {
+        mNeighbors[i].clear();
+    }
+
+    for (int i = 0; i < mNumGridCells; i++) {
+        mUniformGrid[i].clear();
+    }
+
+    if (mSortedNeighborFrameCounter % mSortedNeighborFrameSortingFrameThreshold == 0) {
+
+        for (int i = 0; i < mNumParticles; i++) {
+            int cell_id = get_cell_id(mPositionsStar[i]);
+            mNeighborUnsortedIndices[i] = cell_id;
+        }
+
+        SolverUtils::countingSort(
+            mNeighborUnsortedIndices,
+            mNeighborSortedIndices,
+            mNumGridCells
+        );
+        
+        for (int i = 0; i < mNumParticles; i++) {
+            mPositions[i] = mPositionsTemp[mNeighborSortedIndices[i]];
+            mPositionsStar[i] = mPositionsStarTemp[mNeighborSortedIndices[i]];
+            mVelocities[i] = mVelocitiesTemp[mNeighborSortedIndices[i]];
+            
+            int cell_id = get_cell_id(mPositionsStar[i]);
+            mUniformGrid[cell_id].push_back(i);
+        }
+
+    } else {
+        for (int i = 0; i < mNumParticles; i++) {
+            int cell_id = get_cell_id(mPositionsStar[i]);
+            mUniformGrid[cell_id].push_back(i);
+        }
+    }
+
+    for (int yy = 0; yy < mGridY; yy++) {
+        for (int xx = 0; xx < mGridX; xx++) {
+            for (int zz = 0; zz < mGridZ; zz++) {
+
+                int cell_id = 
+                    yy * mGridX * mGridZ +
+                    xx * mGridZ + 
+                    zz;
+
+                if (mUniformGrid[cell_id].empty() == true) {
+                    continue;
+                }
+
+                int yLower = yy - 1; int yUpper = yy + 1;
+                int xLower = xx - 1; int xUpper = xx + 1;
+                int zLower = zz - 1; int zUpper = zz + 1;
+
+                yLower = (yLower >= 0) ? yLower : 0; 
+                xLower = (xLower >= 0) ? xLower : 0;
+                zLower = (zLower >= 0) ? zLower : 0;
+
+                yUpper = (yUpper >= mGridY) ? mGridY - 1 : yUpper;
+                xUpper = (xUpper >= mGridX) ? mGridX - 1 : xUpper;
+                zUpper = (zUpper >= mGridZ) ? mGridZ - 1 : zUpper;
+
+                for (int y = yLower; y <= yUpper; y++) {
+                    for (int x = xLower; x <= xUpper; x++) {
+                        for (int z = zLower; z <= zUpper; z++) {
+
+                            int neighbor_cell_id =
+                                y * mGridX * mGridZ +
+                                x * mGridZ + 
+                                z;
+
+                            if (mUniformGrid[neighbor_cell_id].empty() == true) {
+                                continue;
+                            }
+
+                            for (int i = 0; i < mUniformGrid[cell_id].size(); i++) {
+                                const int current_index = mUniformGrid[cell_id][i];
+                                /*if (current_index >= ptr_solid_start) {
+                                    continue;
+                                }*/
+                                const glm::vec3& self = mPositionsStar[current_index];
+                                for (int j = 0; j < mUniformGrid[neighbor_cell_id].size(); j++) {
+                                    const int neighbor_index = mUniformGrid[neighbor_cell_id][j];
+                                    const glm::vec3& other = mPositionsStar[neighbor_index];
+                                    const glm::vec3 tmp = self - other;
+                                    if (glm::dot(tmp, tmp) <= mParameters.mKernelRadius * mParameters.mKernelRadius) {
+                                        mNeighbors[current_index].push_back(neighbor_index);
+                                    }
+                                }
+                            } //end distance check
+
+                        }
+                    }
+                } //end neighbor cells checking 
+
+
+            }
+        }
+    } //end grid checking
+
+    mSortedNeighborFrameCounter++;
+}
+
+void PBDVerletSolver::findNeighborsUniformGridGhost() {
+
+    for (int i = 0; i < mNumParticles; i++) {
+        mNeighbors[i].clear();
+    }
+
+    for (int i = 0; i < mNumGridCells; i++) {
+        mUniformGrid[i].clear();
+    }
+
+    for (int i = 0; i < mNumParticles; i++) {
+        int cell_id = get_cell_id_ghost(mPositionsStar[i]);
+        assert(cell_id >= 0 && cell_id < mNumGridCells && "index must be in range");
+        mUniformGrid[cell_id].push_back(i);
+    }
+
+    for (int yy = 1; yy < mGridY-1; yy++) {
+        for (int xx = 1; xx < mGridX-1; xx++) {
+            for (int zz = 1; zz < mGridZ-1; zz++) {
+
+                int cell_id = 
+                    yy * mGridX * mGridZ +
+                    xx * mGridZ + 
+                    zz;
+
+                if (mUniformGrid[cell_id].empty() == true) {
+                    continue;
+                }
+
+                for (int y = yy-1; y <= yy+1; y++) {
+                    for (int x = xx-1; x <= xx+1; x++) {
+                        for (int z = zz-1; z <= zz+1; z++) {
+
+                            int neighbor_cell_id =
+                                y * mGridX * mGridZ +
+                                x * mGridZ + 
+                                z;
+
+                            if (mUniformGrid[neighbor_cell_id].empty() == true) {
+                                continue;
+                            }
+
+                            for (int i = 0; i < mUniformGrid[cell_id].size(); i++) {
+                                const int current_index = mUniformGrid[cell_id][i];
+                                /*if (current_index >= ptr_solid_start) {
+                                    continue;
+                                }*/
+                                const glm::vec3& self = mPositionsStar[current_index];
+                                for (int j = 0; j < mUniformGrid[neighbor_cell_id].size(); j++) {
+                                    const int neighbor_index = mUniformGrid[neighbor_cell_id][j];
+                                    const glm::vec3& other = mPositionsStar[neighbor_index];
+                                    const glm::vec3 tmp = self - other;
+                                    if (glm::dot(tmp, tmp) <= mParameters.mKernelRadius * mParameters.mKernelRadius) {
+                                        mNeighbors[current_index].push_back(neighbor_index);
+                                    }
+                                }
+                            } //end distance check
+
+                        }
+                    }
+                } //end neighbor cells checking 
+
+
+            }
+        }
+    } //end grid checking
+
 }
 
 void PBDVerletSolver::findNeighborsUniformGrid() {
@@ -542,10 +787,8 @@ void PBDVerletSolver::findNeighborsUniformGrid() {
 
     for (int i = 0; i < mNumParticles; i++) {
         int cell_id = get_cell_id(mPositionsStar[i]);
-        //glm::vec3& position = mPositionsStar[i];
         assert(cell_id >= 0 && cell_id < mNumGridCells && "index must be in range");
-        //if (cell_id >= 0 && cell_id < mNumGridCells)
-            mUniformGrid[cell_id].push_back(i);
+        mUniformGrid[cell_id].push_back(i);
     }
 
     for (int yy = 0; yy < mGridY; yy++) {
@@ -707,7 +950,7 @@ bool PBDVerletSolver::imgui() {
         ImGui::Combo("solver", &selectedSolver, solverTypes, IM_ARRAYSIZE(solverTypes));
         mSolverMode = (PBDVerletSolver::SolverMode) selectedSolver;
 
-        static const char* neighborTypes[]{"basic-verlet", "minimalist"}; 
+        static const char* neighborTypes[]{"basic-verlet", "minimalist", "ghost", "sorted"}; 
         ImGui::Combo("neighbors", &selectedNeighbor, neighborTypes, IM_ARRAYSIZE(neighborTypes));
         mNeighborMode = (PBDVerletSolver::NeighborMode) selectedNeighbor;
         if (ImGui::Button("save state")) {

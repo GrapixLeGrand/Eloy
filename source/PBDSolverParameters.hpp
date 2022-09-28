@@ -44,14 +44,14 @@ public:
     float mParticleRadius           = static_cast<float>(0.03);
     float mKernelRadius             = static_cast<float>(0.11);
     float mKernelFactor             = static_cast<float>(1);
-    float mBoundaryCollisionCoeff   = static_cast<float>(1.2);
+    float mBoundaryCollisionCoeff   = static_cast<float>(0.175);
     float mRestDensity              = static_cast<float>(6378.0);
     float mMass                     = static_cast<float>(1);
     float mTimeStep                 = static_cast<float>(0.0083);
     glm::vec3 mGravity              = glm::vec3(0, -10.0, 0.0);
     float mRelaxationEpsilon        = static_cast<float>(600);
     float mSCorrDeltaQ              = static_cast<float>(0.032); //was 0.3 * 0.1
-    float mSCorrK                   = static_cast<float>(0.0001);
+    float mSCorrK                   = static_cast<float>(0.002);
     float mSCorrN                   = static_cast<float>(4);//1.57
     float mCXsph                    = static_cast<float>(0.01);
     float mEpsilonVorticity         = static_cast<float>(0.0);

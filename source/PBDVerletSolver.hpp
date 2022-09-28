@@ -25,7 +25,9 @@ public:
 
     enum NeighborMode {
        VERLET_BASIC,
-       VERLET_MINIMAL 
+       VERLET_MINIMAL,
+       VERLET_GHOST,
+       VERLET_SORTED
     };
 
 private:
@@ -38,6 +40,12 @@ private:
     int selectedNeighbor = 0;
     float mScorrThreshold = 0.001f;
     
+    std::vector<glm::vec3> mPositionsStarTemp;
+    std::vector<glm::vec3> mPositionsTemp;
+    std::vector<glm::vec3> mVelocitiesTemp;
+    std::vector<int> mNeighborSortedIndices;
+    std::vector<int> mNeighborUnsortedIndices;
+
     std::vector<glm::vec3> mPositionsStar;
     std::vector<float> mDensities;
     std::vector<glm::vec3> mAngularVelocities;
@@ -56,17 +64,21 @@ private:
     std::vector<int> mCellsUsedStorage;
     std::vector<std::vector<int>> mCellsPrecomputedNeighbors;
 
-    //int mNumParticles = 0;
-
     //utilitary functions
     inline float s_coor(float rl);
     inline float resolve_collision(float value, float min, float max);
     
     void findNeighborsUniformGrid();
+    void findNeighborsUniformGridGhost();
     void findNeighborsUniformGridMinimalStrategy();
+    void findNeighborsUniformGridSorted();
+    int mSortedNeighborFrameCounter = 0;
+    int mSortedNeighborFrameSortingFrameThreshold = 10;
 
     inline void clearNeighbors();
     inline int get_cell_id(glm::vec3 position);
+    inline int get_cell_id_ghost(glm::vec3 position);
+
     inline bool check_index(int i, int min, int max);
     //void resize(size_t newSize);
     
@@ -85,6 +97,8 @@ private:
 
     SolverMode mSolverMode = BASIC_SINGLE_CORE;
     NeighborMode mNeighborMode = VERLET_BASIC;
+    NeighborMode mLastNeighborMode = mNeighborMode;
+
 public:
 
 

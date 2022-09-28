@@ -24,6 +24,7 @@ set(ELOY_SOURCES
     "source/PBDSolver.cpp"
     "source/PBDVerletSolver.cpp"
     "source/PBDPackedSolver.cpp"
+    "source/SolverUtils.cpp"
     "source/profiling/tsc_x86.cpp"
 )
 
