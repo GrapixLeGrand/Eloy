@@ -63,11 +63,11 @@ bool PBDSolver::imgui() {
         ImGui::SliderInt("subsetps", &mParameters.mSubsteps, 1, 10, "%d");
         
         ImGui::SliderFloat("SCoorDeltaQ", &mParameters.mSCorrDeltaQ, 0.001f, 0.5f, "%.3f");
-        ImGui::SliderFloat("SCoorK", &mParameters.mSCorrK, 0.00000001f, 0.1f, "%.3f");
+        ImGui::SliderFloat("SCoorK", &mParameters.mSCorrK, 0.00000001f, 0.01f, "%.3f");
         ImGui::SliderFloat("SCoorN", &mParameters.mSCorrN, 0.01f, 5.0f, "%.3f");
 
-        ImGui::SliderFloat("Xsph", &mParameters.mCXsph, 0.0001f, 1.0f, "%.3f");
-        ImGui::SliderFloat("epsilon vorticity", &mParameters.mEpsilonVorticity, 0.01f, 1.0f, "%.3f");
+        ImGui::SliderFloat("Xsph", &mParameters.mCXsph, 0.0001f, 0.1f, "%.3f");
+        ImGui::SliderFloat("epsilon vorticity", &mParameters.mEpsilonVorticity, 0.01f, 10.0f, "%.3f");
         ImGui::SliderFloat("time step", &mParameters.mTimeStep, 0.001f, 0.08f, "%.3f");
         quit = ImGui::Button("reset");
 

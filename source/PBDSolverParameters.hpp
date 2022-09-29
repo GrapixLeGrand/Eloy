@@ -53,8 +53,8 @@ public:
     float mSCorrDeltaQ              = static_cast<float>(0.032); //was 0.3 * 0.1
     float mSCorrK                   = static_cast<float>(0.002);
     float mSCorrN                   = static_cast<float>(4);//1.57
-    float mCXsph                    = static_cast<float>(0.01);
-    float mEpsilonVorticity         = static_cast<float>(0.0);
+    float mCXsph                    = static_cast<float>(0.27);
+    float mEpsilonVorticity         = static_cast<float>(4.842);
     int mSubsteps                   = 2;
 
     std::vector<IParticlesData*> mParticlesData;

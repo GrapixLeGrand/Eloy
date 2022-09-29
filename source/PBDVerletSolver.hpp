@@ -96,7 +96,7 @@ private:
     void findNeighbors();
 
     SolverMode mSolverMode = BASIC_MULTI_CORE;
-    NeighborMode mNeighborMode = VERLET_BASIC;
+    NeighborMode mNeighborMode = VERLET_GHOST;
     NeighborMode mLastNeighborMode = mNeighborMode;
 
 public:
