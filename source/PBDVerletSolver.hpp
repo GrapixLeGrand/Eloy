@@ -95,7 +95,7 @@ private:
     void stepBasisMultiThreaded();
     void findNeighbors();
 
-    SolverMode mSolverMode = BASIC_SINGLE_CORE;
+    SolverMode mSolverMode = BASIC_MULTI_CORE;
     NeighborMode mNeighborMode = VERLET_BASIC;
     NeighborMode mLastNeighborMode = mNeighborMode;
 

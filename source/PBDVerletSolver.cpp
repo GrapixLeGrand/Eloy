@@ -53,6 +53,13 @@ PBDVerletSolver::PBDVerletSolver(const PBDSolverParameters& parameters): PBDSolv
     mAngularVelocities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
     mParallelViscosities = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
 
+    mPositionsStarTemp = mPositionsStar;
+    mPositionsTemp = mPositions;
+    mVelocitiesTemp = mVelocities;
+
+    mNeighborSortedIndices = std::vector<int>(mNumParticles, 0);
+    mNeighborUnsortedIndices = std::vector<int>(mNumParticles, 0);
+
     mNeighbors = std::vector<std::vector<int>>(mNumParticles, std::vector<int>{});
 
     //draw the cells on paper you see that the radius is 1.5 cell length. Do the equation then
@@ -116,7 +123,7 @@ void PBDVerletSolver::reset() {
 
     mPositionsStarTemp = mPositionsStar;
     mPositionsTemp = mPositions;
-    mVelocitiesTemp = mVelocitiesTemp;
+    mVelocitiesTemp = mVelocities;
 
     mNeighborSortedIndices = std::vector<int>(mNumParticles, 0);
     mNeighborUnsortedIndices = std::vector<int>(mNumParticles, 0);
@@ -624,6 +631,10 @@ void PBDVerletSolver::findNeighborsUniformGridSorted() {
             mNumGridCells
         );
         
+        mPositionsTemp = mPositions;
+        mPositionsStarTemp = mPositionsStar;
+        mVelocitiesTemp = mVelocities;
+
         for (int i = 0; i < mNumParticles; i++) {
             mPositions[i] = mPositionsTemp[mNeighborSortedIndices[i]];
             mPositionsStar[i] = mPositionsStarTemp[mNeighborSortedIndices[i]];
@@ -947,10 +958,12 @@ bool PBDVerletSolver::imgui() {
         ImGui::SliderFloat("scorrThreshold", &mScorrThreshold, 0.00000001f, 0.01f, "%.3f");
         
         static const char* solverTypes[]{"single-thread", "multi-threaded"}; 
+        selectedSolver = mSolverMode;
         ImGui::Combo("solver", &selectedSolver, solverTypes, IM_ARRAYSIZE(solverTypes));
         mSolverMode = (PBDVerletSolver::SolverMode) selectedSolver;
 
-        static const char* neighborTypes[]{"basic-verlet", "minimalist", "ghost", "sorted"}; 
+        static const char* neighborTypes[]{"basic-verlet", "minimalist", "ghost", "sorted"};
+        selectedNeighbor = mNeighborMode;
         ImGui::Combo("neighbors", &selectedNeighbor, neighborTypes, IM_ARRAYSIZE(neighborTypes));
         mNeighborMode = (PBDVerletSolver::NeighborMode) selectedNeighbor;
         if (ImGui::Button("save state")) {

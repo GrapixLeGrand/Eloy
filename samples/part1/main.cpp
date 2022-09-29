@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
     //glm::vec3 max_pos = {5, 10, 5};
     //glm::vec3 offset = {3, 0, 3};
     glm::vec3 min_pos = {0.5, 0.5, 0.5};
-    glm::vec3 max_pos = {2, 2, 2};
+    glm::vec3 max_pos = {2, 2.5, 2};
     glm::vec3 offset = {0.01, 0.01, 0.1};
     Eloy::AABBParticlesData aabb1(min_pos + offset, max_pos + offset, {1, 0, 0, 1});
 
@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
     //mainFb.addColorAttachment(&sceneResult, 0);
     mainFb.addAttachment(&sceneDepthStencil, Levek::FrameBufferProperties::AttachementType::DEPTH);
 
-    int selectedSolver = 1;
+    int selectedSolver = 0;
     Eloy::PBDSolver* solvers[2] = { &verletSolver, &packedSolver };
 
     while (!windowController->exit() && !inputController->isKeyPressed(Levek::LEVEK_KEY_Q)) {
