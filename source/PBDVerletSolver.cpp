@@ -9,9 +9,11 @@
 #include <algorithm>
 #include <chrono>
 
+#include "PBDSolverParameters.hpp"
+
 namespace Eloy {    
 
-PBDVerletSolver::PBDVerletSolver(const PBDSolverParameters& parameters): PBDSolver(parameters) {
+PBDVerletSolver::PBDVerletSolver(const PBDSolverParameters& parameters): PBDSolver(parameters) /*, mParameters(parameters)*/ {
 
     /*mX = parameters.mX;
     mY = parameters.mY;
@@ -262,6 +264,9 @@ void PBDVerletSolver::findNeighbors() {
 void PBDVerletSolver::step() {
 
     auto startAll = std::chrono::steady_clock::now();
+
+    InjectionParameters injectionParameters (getParameters(), mVelocities, mPositions, mColors);
+    getParameters().mPreStepCallBack(injectionParameters);
 
     switch (mSolverMode) {
         case BASIC_SINGLE_CORE:

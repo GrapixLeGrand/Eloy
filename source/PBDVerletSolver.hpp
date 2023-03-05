@@ -99,6 +99,8 @@ private:
     NeighborMode mNeighborMode = VERLET_GHOST;
     NeighborMode mLastNeighborMode = mNeighborMode;
 
+    //const PBDSolverParameters& mParameters;
+
 public:
 
 

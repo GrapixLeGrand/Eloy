@@ -4,8 +4,8 @@
 #include "LevekGL.hpp"
 #include "Eloy.hpp"
 
-int resolutionX = 1280;
-int resolutionY = 720;
+int resolutionX = 1920;
+int resolutionY = 1080;
 
 int main(int argc, char** argv) {
     
@@ -116,6 +116,14 @@ int main(int argc, char** argv) {
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         
+
+        std::cout << "left nobe (" << 
+            inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 0) << ", " <<  
+            inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 1) << std::endl; 
+        /*std::cout << "left nobe (" << 
+            inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 0) << ", " <<  
+            inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 1) << std::endl; 
+        */
         inputController->poll();
         windowController->swapBuffers();
     }
