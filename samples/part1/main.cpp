@@ -37,6 +37,9 @@ int main(int argc, char** argv) {
     Eloy::AABBParticlesData aabb1(min_pos + offset, max_pos + offset, {1, 0, 0, 1});
 
     parameters.mParticlesData.push_back(&aabb1);
+    
+    Eloy::FluidBehavior moveFluid;
+    parameters.mPreStepCallBack = moveFluid.getFun();
 
     Eloy::PBDVerletSolver verletSolver(parameters);
     Eloy::PBDPackedSolver packedSolver(parameters);
@@ -113,17 +116,23 @@ int main(int argc, char** argv) {
 
         ImGui::End();
 
+        moveFluid.imGui();
+
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         
 
-        std::cout << "left nobe (" << 
+        /*std::cout << "left nobe (" << 
             inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 0) << ", " <<  
-            inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 1) << std::endl; 
+            inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 1) << std::endl; */
         /*std::cout << "left nobe (" << 
             inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 0) << ", " <<  
             inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 1) << std::endl; 
         */
+        
+        moveFluid.setAnalog(0, {inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 0), inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 1)});
+        moveFluid.setAnalog(1, {inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 2), inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 3)});
+
         inputController->poll();
         windowController->swapBuffers();
     }

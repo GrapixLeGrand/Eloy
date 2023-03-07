@@ -265,8 +265,7 @@ void PBDVerletSolver::step() {
 
     auto startAll = std::chrono::steady_clock::now();
 
-    InjectionParameters injectionParameters (getParameters(), mVelocities, mPositions, mColors);
-    getParameters().mPreStepCallBack(injectionParameters);
+    
 
     switch (mSolverMode) {
         case BASIC_SINGLE_CORE:
@@ -294,6 +293,9 @@ void PBDVerletSolver::stepBasisMultiThreaded() {
         mPositionsStar[i] = mPositions[i] + mVelocities[i] * mParameters.mTimeStep; //prediction
         CHECK_NAN_VEC(mPositionsStar[i]);
     }
+
+    InjectionParameters injectionParameters (getParameters(), mVelocities, mPositionsStar, mColors);
+    getParameters().mPreStepCallBack(injectionParameters);
 
     findNeighbors();
 
@@ -441,6 +443,9 @@ void PBDVerletSolver::stepBasisSingleThreaded() {
         CHECK_NAN_VEC(mPositionsStar[i]);
     }
 
+    InjectionParameters injectionParameters (getParameters(), mVelocities, mPositionsStar, mColors);
+    getParameters().mPreStepCallBack(injectionParameters);
+    
     mNeighborCycles = start_tsc();
     findNeighbors();
     mNeighborCycles = stop_tsc(mNeighborCycles);
