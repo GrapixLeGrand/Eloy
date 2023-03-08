@@ -232,6 +232,10 @@ inline glm::vec3 solve_boundary_collision_constraint(glm::vec3 n, glm::vec3 p0, 
 
 void PBDVerletSolver::findNeighbors() {
     auto startNeigbors = std::chrono::steady_clock::now();
+    
+    if (mSimulationFrames % mNeighborFindingFrequency != 0) {
+        return;
+    }
 
     if (mNeighborMode != mLastNeighborMode) {
         printf("changing neighbor mode, reseting simulation\n");
@@ -273,10 +277,11 @@ void PBDVerletSolver::step() {
         default:
         assert(false);
     }
-
+    updateColorsWithMemoryLocation();
     auto endAll = std::chrono::steady_clock::now();
     mSolverFullMs = std::chrono::duration<double, std::milli> (endAll - startAll).count();
     mSolverMs = mSolverFullMs - mNeighborMs;
+    mSimulationFrames++;
 }
 
 void PBDVerletSolver::stepBasisMultiThreaded() {
@@ -617,9 +622,9 @@ void PBDVerletSolver::findNeighborsUniformGridSorted() {
     for (int i = 0; i < mNumGridCells; i++) {
         mUniformGrid[i].clear();
     }
-
-    if (mSortedNeighborFrameCounter % mSortedNeighborFrameSortingFrameThreshold == 0) {
-
+    
+    if (mSimulationFrames % mNeighborSortingFrequency == 0) {
+        //printf("hello\n");
         for (int i = 0; i < mNumParticles; i++) {
             int cell_id = get_cell_id(mPositionsStar[i]);
             mNeighborUnsortedIndices[i] = cell_id;
@@ -654,7 +659,16 @@ void PBDVerletSolver::findNeighborsUniformGridSorted() {
     for (int yy = 0; yy < mGridY; yy++) {
         for (int xx = 0; xx < mGridX; xx++) {
             for (int zz = 0; zz < mGridZ; zz++) {
+    //for (int i = 0; i < mNumParticles; i++) {
 
+        //int cell_id = get_cell_id(mPositionsStar[i]);
+        //std::vector<int>& current_cell_indices = mUniformGrid[cell_id];
+
+        //int yy = cell_id / (mGridX * mGridZ);
+        //int tmp = cell_id - yy * mGridX * mGridZ;
+        //int xx = tmp / mGridZ;
+        //int zz = tmp % mGridZ;
+                
                 int cell_id = 
                     yy * mGridX * mGridZ +
                     xx * mGridZ + 
@@ -709,12 +723,11 @@ void PBDVerletSolver::findNeighborsUniformGridSorted() {
                     }
                 } //end neighbor cells checking 
 
-
+    //}
             }
         }
     } //end grid checking
 
-    mSortedNeighborFrameCounter++;
 }
 
 void PBDVerletSolver::findNeighborsUniformGridGhost() {
@@ -944,13 +957,14 @@ void PBDVerletSolver::getParameters(PBDSolverParameters& out) const {
 
 
 
-
-
-
 bool PBDVerletSolver::imgui() {
     bool quit = PBDSolver::imgui();
     ImGui::BeginTabBar("Verlet solver");
     if (ImGui::BeginTabItem("Parameters")) {
+
+        ImGui::SliderInt("neighbor sorting freq", &mNeighborSortingFrequency, 1, 100, "%.3f");
+        ImGui::SliderInt("neighbor finding freq", &mNeighborFindingFrequency, 1, 16, "%.3f");
+
         ImGui::Text("%d particles %lf ms", mNumParticles, mSolverMs);
         ImGui::Text("%d cells %lf ms", mNumGridCells, mNeighborMs);
         ImGui::Text("simulation (everything) %lf ms (%lf fps)", mSolverFullMs, (1.0 / mSolverFullMs) * 1000.0);
@@ -972,6 +986,15 @@ bool PBDVerletSolver::imgui() {
     }
     ImGui::EndTabBar();
     return quit;
+}
+
+
+void PBDVerletSolver::updateColorsWithMemoryLocation() {
+    //glm::vec3 dims = mAABB.max - mAABB.min; 
+    for (int i = 0; i < mNumParticles; i++) {
+        glm::vec4 color(static_cast<float>(i) / static_cast<float>(mNumParticles), 0, 0, 1.0);
+        mColors[i] = color;
+    }
 }
 
 

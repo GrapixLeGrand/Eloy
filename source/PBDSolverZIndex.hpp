@@ -15,7 +15,7 @@ namespace Eloy {
 
 class PBDSolverParameters;
 
-class PBDVerletSolver : public PBDSolver {
+class PBDSolverZindex : public PBDSolver {
 public:
 
     enum SolverMode {
@@ -82,9 +82,7 @@ private:
     inline int get_cell_id(glm::vec3 position);
     inline int get_cell_id_ghost(glm::vec3 position);
 
-    inline bool check_index(int i, int min, int max);
-    //void resize(size_t newSize);
-    
+    inline bool check_index(int i, int min, int max);    
 
     //for profiling
     unsigned long long mSolverCycles = 0;
@@ -98,9 +96,7 @@ private:
     void stepBasisMultiThreaded();
     void findNeighbors();
 
-    SolverMode mSolverMode = BASIC_MULTI_CORE;
-    NeighborMode mNeighborMode = VERLET_SORTED;
-    NeighborMode mLastNeighborMode = mNeighborMode;
+
 
     void updateColorsWithMemoryLocation();
 public:
@@ -108,25 +104,10 @@ public:
 
 friend class PBDSolverImGui;
 
-PBDVerletSolver(const PBDSolverParameters& parameters);
+PBDSolverZindex(const PBDSolverParameters& parameters);
 virtual void step();
 virtual bool imgui();
 virtual void reset();
 
-
-
-
-//const std::vector<glm::vec3>& getPositions() const;
-//const std::vector<glm::vec4>& getColors() const;
-
-/*float getDiameter() {
-    return 2.0f * mParameters.mParticleRadius;
-}*/
-
-//todo
-PBDSolverParameters getParameters() const;
-
-
 };
-
 }
