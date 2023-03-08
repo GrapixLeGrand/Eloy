@@ -9,9 +9,11 @@
 #include <algorithm>
 #include <chrono>
 
+#include "PBDSolverParameters.hpp"
+
 namespace Eloy {    
 
-PBDVerletSolver::PBDVerletSolver(const PBDSolverParameters& parameters): PBDSolver(parameters) {
+PBDVerletSolver::PBDVerletSolver(const PBDSolverParameters& parameters): PBDSolver(parameters) /*, mParameters(parameters)*/ {
 
     /*mX = parameters.mX;
     mY = parameters.mY;
@@ -267,6 +269,8 @@ void PBDVerletSolver::step() {
 
     auto startAll = std::chrono::steady_clock::now();
 
+    
+
     switch (mSolverMode) {
         case BASIC_SINGLE_CORE:
             this->stepBasisSingleThreaded();
@@ -294,6 +298,9 @@ void PBDVerletSolver::stepBasisMultiThreaded() {
         mPositionsStar[i] = mPositions[i] + mVelocities[i] * mParameters.mTimeStep; //prediction
         CHECK_NAN_VEC(mPositionsStar[i]);
     }
+
+    InjectionParameters injectionParameters (getParameters(), mVelocities, mPositionsStar, mColors);
+    getParameters().mPreStepCallBack(injectionParameters);
 
     findNeighbors();
 
@@ -441,6 +448,9 @@ void PBDVerletSolver::stepBasisSingleThreaded() {
         CHECK_NAN_VEC(mPositionsStar[i]);
     }
 
+    InjectionParameters injectionParameters (getParameters(), mVelocities, mPositionsStar, mColors);
+    getParameters().mPreStepCallBack(injectionParameters);
+    
     mNeighborCycles = start_tsc();
     findNeighbors();
     mNeighborCycles = stop_tsc(mNeighborCycles);

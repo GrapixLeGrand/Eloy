@@ -36,10 +36,14 @@ int main(int argc, char** argv) {
     mainFb.addAttachment(&sceneDepthStencil, Levek::FrameBufferProperties::AttachementType::DEPTH);
 
     Eloy::PBDSolverParameters parameters;
+    
+    parameters.mX = 5;
+    parameters.mY = 5;
+    parameters.mZ = 5;
     //parameters.mParticuleRadius = 0.25f;
     glm::vec3 min_pos = {0.5, 0.5, 0.5};
     glm::vec3 max_pos = {4, 10, 4};
-    glm::vec3 offset = {0, 3, 0};
+    glm::vec3 offset = {0, 1, 0};
     Eloy::AABBParticlesData aabb1(min_pos + offset, max_pos + offset, {1, 0, 0, 1});
 
     parameters.mParticlesData.push_back(&aabb1);

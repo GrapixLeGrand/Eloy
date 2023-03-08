@@ -7,6 +7,7 @@
 #include "ParticlesRendering.hpp"
 #include "ParticlesRenderingSpf.hpp"
 //#include "PBDSolverImGui.hpp"
+#include "FluidBehavior.hpp"
 
 #include <utility>
 

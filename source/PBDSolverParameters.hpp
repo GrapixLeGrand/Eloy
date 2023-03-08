@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <functional>
 #include "glm/glm.hpp"
 //#include "ParticlesData.hpp"
 
@@ -35,10 +36,35 @@ public:
  * 
  */
 
+class PBDSolverParameters;
+class InjectionParameters {
+public:
+    InjectionParameters(
+        const PBDSolverParameters& p,
+        std::vector<glm::vec3>& vel,
+        std::vector<glm::vec3>& pos, 
+        std::vector<glm::vec4>& col
+    ): parameters(p), velocitie(vel), positions(pos), colors(col) {}
+    const PBDSolverParameters& parameters;
+    std::vector<glm::vec3>& velocitie;
+    std::vector<glm::vec3>& positions;
+    std::vector<glm::vec4>& colors;
+};
+
+using InjectionFunction = std::function<void(InjectionParameters&)>; 
+
+///dummy is used to make sure that the injection function can have a valid value
+static void dummy(InjectionParameters&) { /* do nothing */}
+
+
 class IParticlesData;
+
 //class PBDSolver;
 //worked well with the sim with the pressure uncorrected
 class PBDSolverParameters {
+
+    
+
 public:
     int mX = 3, mY = 3, mZ = 3;
     float mParticleRadius           = static_cast<float>(0.03);
@@ -57,6 +83,9 @@ public:
     float mEpsilonVorticity         = static_cast<float>(4.842);
     int mSubsteps                   = 2;
 
+    //can be called by the solver before the step body execute
+    InjectionFunction mPreStepCallBack = dummy; //TODO check isnt empty
+
     std::vector<IParticlesData*> mParticlesData;
     PBDSolverParameters(): mParticleDiameter(2.0f * mParticleRadius) {
         //mKernelRadius = 1.5f * mParticleRadius;
@@ -67,6 +96,8 @@ private:
     float mParticleDiameter = static_cast<float>(0);
     
 };
+
+
 
 /*
 class PBDSolverParameters {

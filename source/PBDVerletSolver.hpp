@@ -103,6 +103,8 @@ private:
     NeighborMode mLastNeighborMode = mNeighborMode;
 
     void updateColorsWithMemoryLocation();
+    //const PBDSolverParameters& mParameters;
+
 public:
 
 
