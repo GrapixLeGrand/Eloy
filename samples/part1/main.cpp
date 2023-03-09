@@ -39,7 +39,8 @@ int main(int argc, char** argv) {
     parameters.mParticlesData.push_back(&aabb1);
     
     Eloy::FluidBehavior moveFluid;
-    parameters.mPreStepCallBack = moveFluid.getFun();
+    //parameters.mPreStepCallBack = moveFluid.getFun();
+    parameters.behaviors.push_back(&moveFluid);
 
     Eloy::PBDVerletSolver verletSolver(parameters);
     Eloy::PBDPackedSolver packedSolver(parameters);
@@ -130,8 +131,10 @@ int main(int argc, char** argv) {
             inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 1) << std::endl; 
         */
         
-        //moveFluid.setAnalog(0, {inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 0), inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 1)});
-        //moveFluid.setAnalog(1, {inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 2), inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 3)});
+        moveFluid.setAnalog(0, {inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 0), inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 1)});
+        moveFluid.setAnalog(1, {inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 2), inputController->gamePadAxis(Levek::Joystick::LEVEK_JOYSTICK_1, 3)});
+        moveFluid.setGravity(!inputController->gamePadButton(Levek::Joystick::LEVEK_JOYSTICK_1, Levek::GamePadButton::LEVEK_BUTTON_A));
+
 
         inputController->poll();
         windowController->swapBuffers();

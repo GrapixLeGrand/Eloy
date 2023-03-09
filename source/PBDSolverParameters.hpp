@@ -43,21 +43,24 @@ public:
         const PBDSolverParameters& p,
         std::vector<glm::vec3>& vel,
         std::vector<glm::vec3>& pos, 
-        std::vector<glm::vec4>& col
-    ): parameters(p), velocitie(vel), positions(pos), colors(col) {}
+        std::vector<glm::vec4>& col,
+        glm::vec3& grav
+    ): parameters(p), velocitie(vel), positions(pos), colors(col), gravity(grav) {}
     const PBDSolverParameters& parameters;
     std::vector<glm::vec3>& velocitie;
     std::vector<glm::vec3>& positions;
     std::vector<glm::vec4>& colors;
+    glm::vec3& gravity;
 };
 
-using InjectionFunction = std::function<void(InjectionParameters&)>; 
+using InjectionFunction = std::function<void(InjectionParameters&)>;
 
 ///dummy is used to make sure that the injection function can have a valid value
 static void dummy(InjectionParameters&) { /* do nothing */}
 
 
 class IParticlesData;
+class IBehavior;
 
 //class PBDSolver;
 //worked well with the sim with the pressure uncorrected
@@ -85,6 +88,8 @@ public:
 
     //can be called by the solver before the step body execute
     InjectionFunction mPreStepCallBack = dummy; //TODO check isnt empty
+
+    std::vector<IBehavior*> behaviors;
 
     std::vector<IParticlesData*> mParticlesData;
     PBDSolverParameters(): mParticleDiameter(2.0f * mParticleRadius) {

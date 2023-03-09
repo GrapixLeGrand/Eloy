@@ -111,9 +111,20 @@ PBDVerletSolver::PBDVerletSolver(const PBDSolverParameters& parameters): PBDSolv
 
     }
 
+    for (auto behavior : mParameters.behaviors) {
+        InjectionParameters injectionParameters (getParameters(), mVelocities, mPositionsStar, mColors, mParameters.mGravity);
+        behavior->start(injectionParameters);
+    }
+
 }
 
 void PBDVerletSolver::reset() {
+    printf("reset behaviors if any");
+    for (auto behavior : mParameters.behaviors) {
+        InjectionParameters injectionParameters (getParameters(), mVelocities, mPositionsStar, mColors, mParameters.mGravity);
+        behavior->reset(injectionParameters);
+    }
+
     printf("reset of verlet solver\n");
     PBDSolver::reset();
     mPositionsStar = std::vector<glm::vec3>(mNumParticles, glm::vec3(0));
@@ -269,8 +280,6 @@ void PBDVerletSolver::step() {
 
     auto startAll = std::chrono::steady_clock::now();
 
-    
-
     switch (mSolverMode) {
         case BASIC_SINGLE_CORE:
             this->stepBasisSingleThreaded();
@@ -299,8 +308,13 @@ void PBDVerletSolver::stepBasisMultiThreaded() {
         CHECK_NAN_VEC(mPositionsStar[i]);
     }
 
-    InjectionParameters injectionParameters (getParameters(), mVelocities, mPositionsStar, mColors);
-    getParameters().mPreStepCallBack(injectionParameters);
+    for (auto behavior : mParameters.behaviors) {
+        InjectionParameters injectionParameters (getParameters(), mVelocities, mPositionsStar, mColors, mParameters.mGravity);
+        behavior->step(injectionParameters);
+    }
+
+    //InjectionParameters injectionParameters (getParameters(), mVelocities, mPositionsStar, mColors, mParameters.mGravity);
+    //getParameters().mPreStepCallBack(injectionParameters);
 
     findNeighbors();
 
@@ -448,8 +462,13 @@ void PBDVerletSolver::stepBasisSingleThreaded() {
         CHECK_NAN_VEC(mPositionsStar[i]);
     }
 
-    InjectionParameters injectionParameters (getParameters(), mVelocities, mPositionsStar, mColors);
-    getParameters().mPreStepCallBack(injectionParameters);
+    for (auto behavior : mParameters.behaviors) {
+        InjectionParameters injectionParameters (getParameters(), mVelocities, mPositionsStar, mColors, mParameters.mGravity);
+        behavior->step(injectionParameters);
+    }
+
+    
+    //getParameters().mPreStepCallBack(injectionParameters);
     
     mNeighborCycles = start_tsc();
     findNeighbors();
